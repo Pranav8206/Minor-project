@@ -1,29 +1,24 @@
 import express from "express";
-import cookieParser from "cookie-parser";
 import cors from "cors";
+import path from "node:path";
+
+import apiRoutes from "./src/routes/index.js";
+import { errorHandler, notFound } from "./src/middleware/error.middleware.js";
 
 const app = express();
 
-const defaultCorsOrigin = "http://localhost:3000";
-const corsOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(",").map((origin) => origin.trim())
-  : [defaultCorsOrigin];
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use("/uploads", express.static(path.resolve("uploads")));
 
-app.use(
-  cors({
-    origin: corsOrigins,
-    credentials: true,
-  })
-);
-
-app.use(express.static("public"));
-
-app.use(express.json({ limit: "16kb" }));
-app.use(express.urlencoded({ extended: true, limit: "16kb" }));
-app.use(cookieParser());
+app.use("/api", apiRoutes);
 
 app.get("/", (req, res) => {
-  res.send("Welcome to the Booking System API");
+  res.json({ message: "Backend API is running" });
 });
 
-export { app };
+app.use(notFound);
+app.use(errorHandler);
+
+export default app;
