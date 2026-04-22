@@ -248,6 +248,117 @@ const parseCasePayload = (body, { partial = false } = {}) => {
   return partial ? sanitizePayload(payload) : payload;
 };
 
+const toTitleCase = (value) => {
+  if (typeof value !== "string" || !value.trim()) {
+    return "";
+  }
+
+  return value
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+};
+
+const extractSentence = (description) => {
+  if (typeof description !== "string") {
+    return "";
+  }
+
+  const cleaned = description.replace(/\s+/g, " ").trim();
+  if (!cleaned) {
+    return "";
+  }
+
+  const firstSentence = cleaned.split(/[.!?]+/)[0]?.trim() || "";
+  if (!firstSentence) {
+    return "";
+  }
+
+  return firstSentence.length > 140
+    ? `${firstSentence.slice(0, 137).trim()}...`
+    : firstSentence;
+};
+
+const detectWeaponTerm = (description, entities = []) => {
+  const entityWeapon = Array.isArray(entities)
+    ? entities.find(
+        (item) =>
+          item &&
+          typeof item === "object" &&
+          typeof item.type === "string" &&
+          item.type.toLowerCase() === "weapon" &&
+          typeof item.value === "string" &&
+          item.value.trim()
+      )
+    : null;
+
+  if (entityWeapon) {
+    return entityWeapon.value.trim().toLowerCase();
+  }
+
+  if (typeof description !== "string") {
+    return "";
+  }
+
+  const match = description
+    .toLowerCase()
+    .match(/\b(knife|gun|pistol|rifle|shotgun|machete|bomb|grenade|crowbar|bat)\b/);
+
+  return match?.[1] || "";
+};
+
+const hasSuspectLead = ({ description, suspects }) => {
+  if (Array.isArray(suspects) && suspects.length > 0) {
+    return true;
+  }
+
+  if (typeof description !== "string") {
+    return false;
+  }
+
+  return /\b(suspect\s+identified|suspect\s+arrested|identified\s+suspect|known\s+suspect)\b/i.test(
+    description
+  );
+};
+
+const generateCaseSummary = ({
+  title,
+  description,
+  crime_type,
+  location,
+  entities,
+  suspects,
+}) => {
+  const summaryLines = [];
+  const crimeType = toTitleCase(crime_type) || "Crime";
+  const locationPart =
+    typeof location === "string" && location.trim() ? ` in ${location.trim()}` : "";
+  const weapon = detectWeaponTerm(description, entities);
+  const weaponPart = weapon ? ` involving ${weapon}` : "";
+
+  summaryLines.push(`${crimeType}${weaponPart}${locationPart}.`);
+
+  const firstSentence = extractSentence(description);
+  if (firstSentence) {
+    summaryLines.push(`Incident details: ${firstSentence}.`);
+  } else if (typeof title === "string" && title.trim()) {
+    summaryLines.push(`Incident details: ${title.trim()}.`);
+  }
+
+  if (hasSuspectLead({ description, suspects })) {
+    summaryLines.push("Investigation update: suspect identified.");
+  }
+
+  const trimmedLines = summaryLines
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .slice(0, 3);
+
+  return trimmedLines.join("\n").slice(0, 500);
+};
+
 export const createCase = asyncHandler(async (req, res) => {
   const caseData = parseCasePayload(req.body);
   const normalizedDescription =
@@ -264,6 +375,14 @@ export const createCase = asyncHandler(async (req, res) => {
   const aiResult = await analyzeCaseDescription(caseData.description);
   caseData.embedding = normalizeEmbedding(aiResult?.embedding);
   caseData.entities = mapAiEntitiesToCaseEntities(aiResult?.entities);
+  caseData.case_summary = generateCaseSummary({
+    title: caseData.title,
+    description: caseData.description,
+    crime_type: caseData.crime_type,
+    location: caseData.location,
+    entities: caseData.entities,
+    suspects: caseData.suspects,
+  });
 
   const createdCase = await Case.create(caseData);
 
@@ -548,16 +667,38 @@ export const updateCase = asyncHandler(async (req, res) => {
 
   const updateData = parseCasePayload(req.body, { partial: true });
 
-  const updatedCase = await Case.findByIdAndUpdate(id, updateData, {
-    new: true,
-    runValidators: true,
-  });
+  const existingCase = await Case.findById(id);
 
-  if (!updatedCase) {
+  if (!existingCase) {
     return res.status(404).json({
       message: "Case not found",
     });
   }
+
+  const shouldAutoGenerateSummary =
+    updateData.case_summary === undefined &&
+    (updateData.description !== undefined ||
+      updateData.location !== undefined ||
+      updateData.crime_type !== undefined ||
+      updateData.suspects !== undefined);
+
+  if (shouldAutoGenerateSummary) {
+    const mergedForSummary = {
+      title: updateData.title ?? existingCase.title,
+      description: updateData.description ?? existingCase.description,
+      crime_type: updateData.crime_type ?? existingCase.crime_type,
+      location: updateData.location ?? existingCase.location,
+      entities: updateData.entities ?? existingCase.entities,
+      suspects: updateData.suspects ?? existingCase.suspects,
+    };
+
+    updateData.case_summary = generateCaseSummary(mergedForSummary);
+  }
+
+  const updatedCase = await Case.findByIdAndUpdate(id, updateData, {
+    new: true,
+    runValidators: true,
+  });
 
   return res.status(200).json({
     message: "Case updated successfully",
