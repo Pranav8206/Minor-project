@@ -20,6 +20,14 @@ const topBarMap = {
   "/login": "Sign In",
 };
 
+const getTopBarTitle = (pathname) => {
+  if (pathname?.startsWith("/cases/") && pathname !== "/cases") {
+    return "Case Intelligence View";
+  }
+
+  return topBarMap[pathname] || "Control Center";
+};
+
 export default function AppShell({ children }) {
   const pathname = usePathname();
 
@@ -66,7 +74,7 @@ export default function AppShell({ children }) {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Police Investigation System</p>
-                <h2 className="mt-1 text-xl font-semibold text-slate-900">{topBarMap[pathname] || "Control Center"}</h2>
+                <h2 className="mt-1 text-xl font-semibold text-slate-900">{getTopBarTitle(pathname)}</h2>
               </div>
               <Link
                 href="/login"

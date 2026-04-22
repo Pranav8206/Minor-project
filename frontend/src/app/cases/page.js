@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import useAuthGuard from "../../hooks/useAuthGuard";
@@ -68,7 +69,9 @@ export default function CasesPage() {
               {cases.map((item) => (
                 <tr key={item._id} className="border-b border-slate-100/80 last:border-none">
                   <td className="py-3">
-                    <p className="font-semibold text-slate-800">{item.title}</p>
+                    <Link href={`/cases/${item._id}`} className="font-semibold text-slate-800 hover:text-sky-700 hover:underline">
+                      {item.title}
+                    </Link>
                     <p className="text-xs text-slate-500">#{item._id.slice(-6).toUpperCase()}</p>
                   </td>
                   <td className="py-3 text-slate-600">{item.location}</td>
@@ -85,7 +88,11 @@ export default function CasesPage() {
           {cases.map((item) => (
             <article key={item._id} className="rounded-xl border border-slate-200 bg-white p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">#{item._id.slice(-6).toUpperCase()}</p>
-              <h4 className="mt-1 font-semibold text-slate-900">{item.title}</h4>
+              <h4 className="mt-1 font-semibold text-slate-900">
+                <Link href={`/cases/${item._id}`} className="hover:text-sky-700 hover:underline">
+                  {item.title}
+                </Link>
+              </h4>
               <p className="mt-2 text-sm text-slate-600">{item.description}</p>
               <div className="mt-3 flex flex-wrap gap-2 text-xs font-medium text-slate-600">
                 <span className="rounded-full bg-slate-100 px-2 py-1">{item.location}</span>
