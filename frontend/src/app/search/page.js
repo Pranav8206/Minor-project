@@ -57,7 +57,7 @@ const highlightText = (text, keywords) => {
     }
 
     return (
-      <mark key={`${part}-${index}`} className="rounded bg-amber-200/70 px-1 py-0.5 text-slate-900">
+      <mark key={`${part}-${index}`} className="rounded bg-orange-200/80 px-1 py-0.5 text-text-primary">
         {part}
       </mark>
     );
@@ -109,7 +109,7 @@ export default function SearchPage() {
   };
 
   if (isChecking) {
-    return <div className="rounded-2xl border border-white/70 bg-white/90 p-6 text-sm text-slate-600">Checking authentication...</div>;
+    return <div className="cims-card text-text-secondary p-6 text-sm">Checking authentication...</div>;
   }
 
   if (!isAuthorized) {
@@ -118,9 +118,9 @@ export default function SearchPage() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl border border-slate-200/80 bg-linear-to-r from-slate-900 via-slate-800 to-cyan-900 p-6 text-white shadow-lg shadow-slate-900/10">
+      <section className="rounded-3xl border border-border bg-linear-to-r from-orange-700 via-orange-600 to-amber-600 p-6 text-white shadow-lg shadow-orange-900/20">
         <h3 className="text-xl font-semibold">Natural Language Search</h3>
-        <p className="mt-1 text-sm text-cyan-100/90">
+        <p className="mt-1 text-sm text-orange-50/90">
           Describe incidents in plain language. AI will return semantically similar cases with ranked scores.
         </p>
 
@@ -129,23 +129,23 @@ export default function SearchPage() {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Example: robbery involving knife near railway station with known suspect"
-            className="rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white placeholder:text-cyan-100/70 outline-none focus:border-cyan-200"
+            className="rounded-xl border border-white/30 bg-white/15 px-4 py-3 text-sm text-white placeholder:text-orange-50/80 outline-none focus:border-white/80"
           />
           <input
             value={location}
             onChange={(event) => setLocation(event.target.value)}
             placeholder="Location"
-            className="rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white placeholder:text-cyan-100/70 outline-none focus:border-cyan-200"
+            className="rounded-xl border border-white/30 bg-white/15 px-4 py-3 text-sm text-white placeholder:text-orange-50/80 outline-none focus:border-white/80"
           />
           <input
             value={crimeType}
             onChange={(event) => setCrimeType(event.target.value)}
             placeholder="Crime type"
-            className="rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white placeholder:text-cyan-100/70 outline-none focus:border-cyan-200"
+            className="rounded-xl border border-white/30 bg-white/15 px-4 py-3 text-sm text-white placeholder:text-orange-50/80 outline-none focus:border-white/80"
           />
           <button
             disabled={isLoading}
-            className="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-70"
+            className="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-orange-700 transition hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isLoading ? "Searching..." : "Search"}
           </button>
@@ -155,15 +155,15 @@ export default function SearchPage() {
           <button
             type="button"
             onClick={clearFilters}
-            className="rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-medium text-white transition hover:bg-white/20"
+            className="rounded-full border border-white/35 bg-white/15 px-3 py-1 text-xs font-medium text-white transition hover:bg-white/25"
           >
             Clear filters
           </button>
           {keywords.length > 0 ? (
             <>
-              <span className="text-xs text-cyan-100/85">Detected keywords:</span>
+              <span className="text-xs text-orange-50/85">Detected keywords:</span>
               {keywords.map((item) => (
-                <span key={item} className="rounded-full bg-white/15 px-2.5 py-1 text-xs font-semibold text-cyan-50">
+                <span key={item} className="rounded-full bg-white/20 px-2.5 py-1 text-xs font-semibold text-orange-50">
                   {item}
                 </span>
               ))}
@@ -174,21 +174,21 @@ export default function SearchPage() {
         {error ? <p className="mt-3 text-sm font-medium text-rose-600">{error}</p> : null}
       </section>
 
-      <section className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm shadow-slate-900/5">
-        <h4 className="font-semibold text-slate-900">Recent Search Queries</h4>
+      <section className="cims-card p-6">
+        <h4 className="text-text-primary font-semibold">Recent Search Queries</h4>
         <div className="mt-4 flex flex-wrap gap-2">
           {recentQueries.map((query) => (
-            <span key={query} className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600">
+            <span key={query} className="text-text-secondary bg-background rounded-full border border-border px-3 py-1 text-xs font-medium">
               {query}
             </span>
           ))}
         </div>
       </section>
 
-      <section className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm shadow-slate-900/5">
+      <section className="cims-card p-6">
         <div className="flex items-center justify-between gap-3">
-          <h4 className="font-semibold text-slate-900">Search Results</h4>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+          <h4 className="text-text-primary font-semibold">Search Results</h4>
+          <span className="text-text-secondary bg-background rounded-full px-3 py-1 text-xs font-medium">
             {results.length} matches
           </span>
         </div>
@@ -196,16 +196,16 @@ export default function SearchPage() {
         {isLoading ? (
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="animate-pulse rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div className="h-4 w-2/3 rounded bg-slate-200" />
-                <div className="mt-3 h-3 w-full rounded bg-slate-200" />
-                <div className="mt-2 h-3 w-4/5 rounded bg-slate-200" />
-                <div className="mt-4 h-6 w-24 rounded-full bg-slate-200" />
+              <div key={index} className="animate-pulse rounded-2xl border border-border bg-background p-4">
+                <div className="h-4 w-2/3 rounded bg-orange-200/70" />
+                <div className="mt-3 h-3 w-full rounded bg-orange-200/55" />
+                <div className="mt-2 h-3 w-4/5 rounded bg-orange-200/55" />
+                <div className="mt-4 h-6 w-24 rounded-full bg-orange-200/70" />
               </div>
             ))}
           </div>
         ) : results.length === 0 ? (
-          <p className="mt-3 text-sm text-slate-500">No results yet. Run a natural language search to see similar cases.</p>
+          <p className="text-text-secondary mt-3 text-sm">No results yet. Run a natural language search to see similar cases.</p>
         ) : (
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {results.map((result) => {
@@ -213,25 +213,25 @@ export default function SearchPage() {
               const similarityScore = Math.max(0, Math.min(100, Math.round(Number(result.similarity || 0) * 1000) / 10));
 
               return (
-                <article key={caseItem._id} className="rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-cyan-300 hover:shadow-sm">
+                <article key={caseItem._id} className="rounded-2xl border border-border bg-card p-4 transition hover:border-primary/45 hover:shadow-sm">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">
+                    <p className="text-text-secondary text-xs font-semibold uppercase tracking-[0.15em]">
                       {caseItem._id.slice(-6).toUpperCase()}
                     </p>
-                    <span className="rounded-full bg-cyan-100 px-2.5 py-1 text-xs font-semibold text-cyan-700">
+                    <span className="rounded-full bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-700">
                       {similarityScore}% match
                     </span>
                   </div>
-                  <h5 className="mt-2 text-base font-semibold text-slate-900">{highlightText(caseItem.title, keywords)}</h5>
-                  <p className="mt-2 text-sm text-slate-600">
+                  <h5 className="text-text-primary mt-2 text-base font-semibold">{highlightText(caseItem.title, keywords)}</h5>
+                  <p className="text-text-secondary mt-2 text-sm">
                     {highlightText(caseItem.case_summary || caseItem.description, keywords)}
                   </p>
-                  <p className="mt-2 text-xs text-slate-500">{highlightText(caseItem.description, keywords)}</p>
-                <div className="mt-3 flex flex-wrap gap-2 text-xs font-medium text-slate-600">
-                  <span className="rounded-full bg-slate-100 px-2 py-1">{caseItem.location}</span>
-                  <span className="rounded-full bg-slate-100 px-2 py-1">{caseItem.crime_type}</span>
-                  <span className="rounded-full bg-slate-100 px-2 py-1 capitalize">{caseItem.status}</span>
-                </div>
+                  <p className="text-text-secondary mt-2 text-xs">{highlightText(caseItem.description, keywords)}</p>
+                  <div className="text-text-secondary mt-3 flex flex-wrap gap-2 text-xs font-medium">
+                    <span className="bg-background rounded-full px-2 py-1">{caseItem.location}</span>
+                    <span className="bg-background rounded-full px-2 py-1">{caseItem.crime_type}</span>
+                    <span className="bg-background rounded-full px-2 py-1 capitalize">{caseItem.status}</span>
+                  </div>
                 </article>
               );
             })}

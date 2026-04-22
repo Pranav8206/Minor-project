@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Police Investigation Dashboard",
-  description: "Case management and analytics interface",
+  title: "CIMS | Crime Investigation Management System",
+  description: "CIMS case management, analytics, and investigation intelligence platform",
 };
 
 export default function RootLayout({ children }) {
@@ -24,7 +24,7 @@ export default function RootLayout({ children }) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="bg-background text-text-primary min-h-full flex flex-col">
         <AppShell>{children}</AppShell>
       </body>
     </html>

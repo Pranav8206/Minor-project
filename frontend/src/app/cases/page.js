@@ -33,7 +33,7 @@ export default function CasesPage() {
   }, [isAuthorized]);
 
   if (isChecking) {
-    return <div className="rounded-2xl border border-white/70 bg-white/90 p-6 text-sm text-slate-600">Checking authentication...</div>;
+    return <div className="cims-card text-text-secondary p-6 text-sm">Checking authentication...</div>;
   }
 
   if (!isAuthorized) {
@@ -41,23 +41,23 @@ export default function CasesPage() {
   }
 
   if (isLoading) {
-    return <div className="rounded-2xl border border-white/70 bg-white/90 p-6 text-sm text-slate-600">Loading cases...</div>;
+    return <div className="cims-card text-text-secondary p-6 text-sm">Loading cases...</div>;
   }
 
   return (
     <div className="space-y-6">
       {error ? <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">{error}</div> : null}
 
-      <section className="rounded-2xl border border-white/70 bg-white/90 p-6 shadow-sm shadow-slate-900/5">
+      <section className="cims-card p-6">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-slate-900">Case List</h3>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{cases.length} cases</span>
+          <h3 className="text-text-primary text-lg font-semibold">Case List</h3>
+          <span className="bg-background text-text-secondary rounded-full px-3 py-1 text-xs font-semibold">{cases.length} cases</span>
         </div>
 
         <div className="mt-5 hidden overflow-x-auto md:block">
           <table className="w-full min-w-130 text-sm">
             <thead>
-              <tr className="border-b border-slate-100 text-left text-slate-500">
+              <tr className="text-text-secondary border-b border-border text-left">
                 <th className="pb-3 font-medium">Case</th>
                 <th className="pb-3 font-medium">Location</th>
                 <th className="pb-3 font-medium">Crime Type</th>
@@ -67,17 +67,17 @@ export default function CasesPage() {
             </thead>
             <tbody>
               {cases.map((item) => (
-                <tr key={item._id} className="border-b border-slate-100/80 last:border-none">
+                <tr key={item._id} className="border-b border-border/70 last:border-none">
                   <td className="py-3">
-                    <Link href={`/cases/${item._id}`} className="font-semibold text-slate-800 hover:text-sky-700 hover:underline">
+                    <Link href={`/cases/${item._id}`} className="text-text-primary font-semibold hover:text-primary hover:underline">
                       {item.title}
                     </Link>
-                    <p className="text-xs text-slate-500">#{item._id.slice(-6).toUpperCase()}</p>
+                    <p className="text-text-secondary text-xs">#{item._id.slice(-6).toUpperCase()}</p>
                   </td>
-                  <td className="py-3 text-slate-600">{item.location}</td>
-                  <td className="py-3 text-slate-600">{item.crime_type}</td>
-                  <td className="py-3 capitalize text-slate-600">{item.status}</td>
-                  <td className="py-3 text-slate-600">{new Date(item.date).toLocaleDateString()}</td>
+                  <td className="text-text-secondary py-3">{item.location}</td>
+                  <td className="text-text-secondary py-3">{item.crime_type}</td>
+                  <td className="text-text-secondary py-3 capitalize">{item.status}</td>
+                  <td className="text-text-secondary py-3">{new Date(item.date).toLocaleDateString()}</td>
                 </tr>
               ))}
             </tbody>
@@ -86,18 +86,18 @@ export default function CasesPage() {
 
         <div className="mt-5 grid gap-4 md:hidden">
           {cases.map((item) => (
-            <article key={item._id} className="rounded-xl border border-slate-200 bg-white p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">#{item._id.slice(-6).toUpperCase()}</p>
-              <h4 className="mt-1 font-semibold text-slate-900">
-                <Link href={`/cases/${item._id}`} className="hover:text-sky-700 hover:underline">
+            <article key={item._id} className="rounded-xl border border-border bg-card p-4">
+              <p className="text-text-secondary text-xs font-semibold uppercase tracking-[0.15em]">#{item._id.slice(-6).toUpperCase()}</p>
+              <h4 className="text-text-primary mt-1 font-semibold">
+                <Link href={`/cases/${item._id}`} className="hover:text-primary hover:underline">
                   {item.title}
                 </Link>
               </h4>
-              <p className="mt-2 text-sm text-slate-600">{item.description}</p>
-              <div className="mt-3 flex flex-wrap gap-2 text-xs font-medium text-slate-600">
-                <span className="rounded-full bg-slate-100 px-2 py-1">{item.location}</span>
-                <span className="rounded-full bg-slate-100 px-2 py-1">{item.crime_type}</span>
-                <span className="rounded-full bg-slate-100 px-2 py-1 capitalize">{item.status}</span>
+              <p className="text-text-secondary mt-2 text-sm">{item.description}</p>
+              <div className="text-text-secondary mt-3 flex flex-wrap gap-2 text-xs font-medium">
+                <span className="bg-background rounded-full px-2 py-1">{item.location}</span>
+                <span className="bg-background rounded-full px-2 py-1">{item.crime_type}</span>
+                <span className="bg-background rounded-full px-2 py-1 capitalize">{item.status}</span>
               </div>
             </article>
           ))}

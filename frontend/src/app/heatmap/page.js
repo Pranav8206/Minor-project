@@ -74,7 +74,7 @@ export default function HeatmapPage() {
   }, [points]);
 
   if (isChecking) {
-    return <div className="rounded-2xl border border-white/70 bg-white/90 p-6 text-sm text-slate-600">Checking authentication...</div>;
+    return <div className="cims-card text-text-secondary p-6 text-sm">Checking authentication...</div>;
   }
 
   if (!isAuthorized) {
@@ -82,18 +82,18 @@ export default function HeatmapPage() {
   }
 
   if (isLoading) {
-    return <div className="rounded-2xl border border-white/70 bg-white/90 p-6 text-sm text-slate-600">Loading heatmap...</div>;
+    return <div className="cims-card text-text-secondary p-6 text-sm">Loading heatmap...</div>;
   }
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border border-white/70 bg-white/90 p-6 shadow-sm shadow-slate-900/5">
-        <h3 className="text-lg font-semibold text-slate-900">Crime Heatmap</h3>
-        <p className="mt-1 text-sm text-slate-500">Cases are plotted using stored location coordinates.</p>
+      <section className="cims-card p-6">
+        <h3 className="text-text-primary text-lg font-semibold">Crime Heatmap</h3>
+        <p className="text-text-secondary mt-1 text-sm">Cases are plotted using stored location coordinates.</p>
         {error ? <p className="mt-3 text-sm font-medium text-rose-600">{error}</p> : null}
-        {!points.length ? <p className="mt-3 text-sm text-slate-500">No coordinates found yet. Add latitude and longitude in Add Case page.</p> : null}
+        {!points.length ? <p className="text-text-secondary mt-3 text-sm">No coordinates found yet. Add latitude and longitude in Add Case page.</p> : null}
 
-        <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
+        <div className="mt-5 overflow-hidden rounded-2xl border border-border">
           <div className="h-140 w-full">
             <MapContainer center={mapCenter} zoom={5} scrollWheelZoom className="h-full w-full">
               <TileLayer

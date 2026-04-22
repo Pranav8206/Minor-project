@@ -30,9 +30,9 @@ ChartJS.register(
 
 const statusTone = {
   open: "text-amber-600 bg-amber-50",
-  investigating: "text-sky-600 bg-sky-50",
+  investigating: "text-orange-700 bg-orange-100",
   closed: "text-emerald-600 bg-emerald-50",
-  archived: "text-slate-600 bg-slate-100",
+  archived: "text-text-secondary bg-background",
 };
 
 const formatRelativeTime = (value) => {
@@ -143,7 +143,7 @@ export default function DashboardPage() {
         {
           label: "Cases",
           data: locationStats.slice(0, 8).map((item) => item.count),
-          backgroundColor: "rgba(14, 165, 233, 0.75)",
+          backgroundColor: "rgba(200, 116, 31, 0.78)",
           borderRadius: 10,
           borderSkipped: false,
         },
@@ -159,8 +159,8 @@ export default function DashboardPage() {
         {
           label: "Cases",
           data: timeline.map((item) => item.count),
-          borderColor: "#0ea5e9",
-          backgroundColor: "rgba(14, 165, 233, 0.15)",
+          borderColor: "#c8741f",
+          backgroundColor: "rgba(200, 116, 31, 0.16)",
           tension: 0.35,
           fill: true,
           pointRadius: 4,
@@ -179,11 +179,12 @@ export default function DashboardPage() {
           data: typeBreakdown.map((item) => item.count),
           backgroundColor: [
             "#0ea5e9",
-            "#06b6d4",
+            "#c8741f",
+            "#d28a44",
             "#22c55e",
             "#f59e0b",
             "#ef4444",
-            "#6366f1",
+            "#9a5a19",
           ],
           borderColor: "#ffffff",
           borderWidth: 2,
@@ -195,7 +196,7 @@ export default function DashboardPage() {
 
   if (isChecking) {
     return (
-      <div className="rounded-3xl border border-slate-200 bg-white/90 p-6 text-sm text-slate-600 shadow-sm">
+      <div className="cims-card text-text-secondary p-6 text-sm">
         Checking authentication...
       </div>
     );
@@ -207,7 +208,7 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="rounded-3xl border border-slate-200 bg-white/90 p-6 text-sm text-slate-600 shadow-sm">
+      <div className="cims-card text-text-secondary p-6 text-sm">
         Loading dashboard...
       </div>
     );
@@ -221,34 +222,34 @@ export default function DashboardPage() {
         </div>
       ) : null}
 
-      <div className="rounded-3xl border border-slate-200/80 bg-linear-to-r from-slate-900 via-slate-800 to-sky-900 px-6 py-7 text-white shadow-lg shadow-slate-900/15">
-        <p className="text-xs uppercase tracking-[0.2em] text-sky-200">Investigation Dashboard</p>
+      <div className="rounded-3xl border border-border bg-linear-to-r from-orange-700 via-orange-600 to-amber-600 px-6 py-7 text-white shadow-lg shadow-orange-900/20">
+        <p className="text-xs uppercase tracking-[0.2em] text-orange-50">CIMS Dashboard</p>
         <h2 className="mt-2 text-2xl font-semibold">Operational Crime Intelligence</h2>
-        <p className="mt-1 text-sm text-sky-100/90">Live view of workload, hotspot behavior, and recent investigation activity.</p>
+        <p className="mt-1 text-sm text-orange-50/90">Live view of workload, hotspot behavior, and recent investigation activity.</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-900/5">
-          <p className="text-sm font-medium text-slate-500">Total cases</p>
-          <p className="mt-3 text-4xl font-semibold text-slate-900">{overview.totalCases}</p>
-          <p className="mt-1 text-xs font-medium text-sky-600">{trend}</p>
+        <article className="cims-card p-5">
+          <p className="text-text-secondary text-sm font-medium">Total cases</p>
+          <p className="text-text-primary mt-3 text-4xl font-semibold">{overview.totalCases}</p>
+          <p className="text-primary mt-1 text-xs font-medium">{trend}</p>
         </article>
-        <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-900/5">
-          <p className="text-sm font-medium text-slate-500">Active cases</p>
+        <article className="cims-card p-5">
+          <p className="text-text-secondary text-sm font-medium">Active cases</p>
           <p className="mt-3 text-4xl font-semibold text-amber-600">{activeCases}</p>
-          <p className="mt-1 text-xs font-medium text-slate-500">Open and investigating cases</p>
+          <p className="text-text-secondary mt-1 text-xs font-medium">Open and investigating cases</p>
         </article>
-        <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-900/5">
-          <p className="text-sm font-medium text-slate-500">High priority cases</p>
+        <article className="cims-card p-5">
+          <p className="text-text-secondary text-sm font-medium">High priority cases</p>
           <p className="mt-3 text-4xl font-semibold text-rose-600">{highPriorityCases}</p>
-          <p className="mt-1 text-xs font-medium text-slate-500">Urgent cases requiring quick response</p>
+          <p className="text-text-secondary mt-1 text-xs font-medium">Urgent cases requiring quick response</p>
         </article>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-900/5">
-          <h3 className="text-lg font-semibold text-slate-900">Crime by location</h3>
-          <p className="mt-1 text-sm text-slate-500">Top areas by reported case volume.</p>
+        <section className="cims-card p-5">
+          <h3 className="text-text-primary text-lg font-semibold">Crime by location</h3>
+          <p className="text-text-secondary mt-1 text-sm">Top areas by reported case volume.</p>
           <div className="mt-5 h-72">
             <Bar
               data={locationChartData}
@@ -273,9 +274,9 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-900/5">
-          <h3 className="text-lg font-semibold text-slate-900">Crime by type</h3>
-          <p className="mt-1 text-sm text-slate-500">Distribution across major crime categories.</p>
+        <section className="cims-card p-5">
+          <h3 className="text-text-primary text-lg font-semibold">Crime by type</h3>
+          <p className="text-text-secondary mt-1 text-sm">Distribution across major crime categories.</p>
           <div className="mt-5 h-72">
             <Doughnut
               data={typeData}
@@ -292,9 +293,9 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-900/5 xl:col-span-2">
-          <h3 className="text-lg font-semibold text-slate-900">Crime over time</h3>
-          <p className="mt-1 text-sm text-slate-500">Monthly trend showing incident frequency over time.</p>
+        <section className="cims-card p-5 xl:col-span-2">
+          <h3 className="text-text-primary text-lg font-semibold">Crime over time</h3>
+          <p className="text-text-secondary mt-1 text-sm">Monthly trend showing incident frequency over time.</p>
           <div className="mt-5 h-80">
             <Line
               data={lineData}
@@ -314,36 +315,36 @@ export default function DashboardPage() {
         </section>
       </div>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-900/5">
+      <section className="cims-card p-5">
         <div className="flex items-center justify-between gap-3">
-          <h3 className="text-lg font-semibold text-slate-900">Recent activity feed</h3>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+          <h3 className="text-text-primary text-lg font-semibold">Recent activity feed</h3>
+          <span className="text-text-secondary bg-background rounded-full px-3 py-1 text-xs font-medium">
             {recentCases.length} updates
           </span>
         </div>
         <div className="mt-4 space-y-3">
           {recentCases.length === 0 ? (
-            <p className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
+            <p className="text-text-secondary bg-background rounded-2xl border border-dashed border-border px-4 py-6 text-sm">
               No recent activity found.
             </p>
           ) : (
             recentCases.map((item) => (
               <article
                 key={item._id}
-                className="rounded-2xl border border-slate-200/80 bg-white px-4 py-3 transition hover:border-sky-300 hover:shadow-sm"
+                className="rounded-2xl border border-border bg-card px-4 py-3 transition hover:border-primary/45 hover:shadow-sm"
               >
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-sm font-semibold text-slate-900">{item.title || "Untitled case"}</p>
+                  <p className="text-text-primary text-sm font-semibold">{item.title || "Untitled case"}</p>
                   <span
-                    className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${statusTone[item.status] || "bg-slate-100 text-slate-600"}`}
+                    className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${statusTone[item.status] || "bg-background text-text-secondary"}`}
                   >
                     {item.status || "unknown"}
                   </span>
                 </div>
-                <p className="mt-1 text-sm text-slate-600">
+                <p className="text-text-secondary mt-1 text-sm">
                   {item.crime_type || "Unknown type"} at {item.location || "Unknown location"}
                 </p>
-                <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
+                <div className="text-text-secondary mt-2 flex items-center justify-between text-xs">
                   <span>Case #{item._id?.slice(-6)?.toUpperCase() || "N/A"}</span>
                   <span>{formatRelativeTime(item.createdAt || item.date)}</span>
                 </div>

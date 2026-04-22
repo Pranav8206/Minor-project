@@ -85,7 +85,7 @@ export default function AddCasePage() {
   };
 
   if (isChecking) {
-    return <div className="rounded-2xl border border-white/70 bg-white/90 p-6 text-sm text-slate-600">Checking authentication...</div>;
+    return <div className="cims-card text-text-secondary p-6 text-sm">Checking authentication...</div>;
   }
 
   if (!isAuthorized) {
@@ -94,30 +94,30 @@ export default function AddCasePage() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1.5fr,1fr]">
-      <section className="rounded-2xl border border-white/70 bg-white/90 p-6 shadow-sm shadow-slate-900/5">
-        <h3 className="text-lg font-semibold text-slate-900">Case Details</h3>
-        <p className="mt-1 text-sm text-slate-500">Capture the core incident details to start investigation workflows.</p>
+      <section className="cims-card p-6">
+        <h3 className="text-text-primary text-lg font-semibold">Case Details</h3>
+        <p className="text-text-secondary mt-1 text-sm">Capture the core incident details to start investigation workflows.</p>
 
         <form className="mt-6 grid gap-4 sm:grid-cols-2" onSubmit={handleSubmit}>
           <input
             name="title"
             value={formData.title}
             onChange={onChange}
-            className="rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900 sm:col-span-2"
+            className="cims-input px-4 py-3 text-sm sm:col-span-2"
             placeholder="Case title"
           />
           <input
             name="location"
             value={formData.location}
             onChange={onChange}
-            className="rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900"
+            className="cims-input px-4 py-3 text-sm"
             placeholder="Location"
           />
           <input
             name="crime_type"
             value={formData.crime_type}
             onChange={onChange}
-            className="rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900"
+            className="cims-input px-4 py-3 text-sm"
             placeholder="Crime type"
           />
           <input
@@ -126,7 +126,7 @@ export default function AddCasePage() {
             onChange={onChange}
             type="number"
             step="any"
-            className="rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900"
+            className="cims-input px-4 py-3 text-sm"
             placeholder="Latitude (e.g. 28.6139)"
           />
           <input
@@ -135,7 +135,7 @@ export default function AddCasePage() {
             onChange={onChange}
             type="number"
             step="any"
-            className="rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900"
+            className="cims-input px-4 py-3 text-sm"
             placeholder="Longitude (e.g. 77.2090)"
           />
           <input
@@ -143,13 +143,13 @@ export default function AddCasePage() {
             value={formData.date}
             onChange={onChange}
             type="date"
-            className="rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900"
+            className="cims-input px-4 py-3 text-sm"
           />
           <select
             name="status"
             value={formData.status}
             onChange={onChange}
-            className="rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900"
+            className="cims-input px-4 py-3 text-sm"
           >
             <option value="open">Open</option>
             <option value="investigating">Investigating</option>
@@ -160,42 +160,42 @@ export default function AddCasePage() {
             name="assigned_officer"
             value={formData.assigned_officer}
             onChange={onChange}
-            className="rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900 sm:col-span-2"
+            className="cims-input px-4 py-3 text-sm sm:col-span-2"
             placeholder="Assigned officer ID (optional)"
           />
           <textarea
             name="description"
             value={formData.description}
             onChange={onChange}
-            className="min-h-28 rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900 sm:col-span-2"
+            className="cims-input min-h-28 px-4 py-3 text-sm sm:col-span-2"
             placeholder="Case description"
           />
           <textarea
             name="suspects"
             value={formData.suspects}
             onChange={onChange}
-            className="min-h-24 rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900 sm:col-span-2"
+            className="cims-input min-h-24 px-4 py-3 text-sm sm:col-span-2"
             placeholder='Suspects JSON array, e.g. [{"name":"John Doe","relationship":"Witness"}]'
           />
           <textarea
             name="evidence"
             value={formData.evidence}
             onChange={onChange}
-            className="min-h-24 rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900 sm:col-span-2"
+            className="cims-input min-h-24 px-4 py-3 text-sm sm:col-span-2"
             placeholder='Evidence JSON array, e.g. [{"type":"image","description":"CCTV frame"}]'
           />
           <textarea
             name="embedding"
             value={formData.embedding}
             onChange={onChange}
-            className="min-h-20 rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900 sm:col-span-2"
+            className="cims-input min-h-20 px-4 py-3 text-sm sm:col-span-2"
             placeholder="Embedding JSON array, e.g. [0.12, 0.34, 0.56]"
           />
           <textarea
             name="entities"
             value={formData.entities}
             onChange={onChange}
-            className="min-h-24 rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900 sm:col-span-2"
+            className="cims-input min-h-24 px-4 py-3 text-sm sm:col-span-2"
             placeholder='Entities JSON array, e.g. [{"label":"person","value":"John"}]'
           />
           {error ? <p className="text-sm font-medium text-rose-600 sm:col-span-2">{error}</p> : null}
@@ -203,7 +203,7 @@ export default function AddCasePage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70 sm:col-span-2"
+            className="cims-button-primary px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-70 sm:col-span-2"
           >
             {isSubmitting ? "Saving..." : "Save Case"}
           </button>
@@ -211,17 +211,17 @@ export default function AddCasePage() {
       </section>
 
       <aside className="space-y-4">
-        <article className="rounded-2xl border border-white/70 bg-white/90 p-5 shadow-sm shadow-slate-900/5">
-          <h4 className="font-semibold text-slate-900">Checklist</h4>
-          <ul className="mt-3 space-y-2 text-sm text-slate-600">
+        <article className="cims-card p-5">
+          <h4 className="text-text-primary font-semibold">Checklist</h4>
+          <ul className="text-text-secondary mt-3 space-y-2 text-sm">
             <li>Attach supporting evidence files</li>
             <li>Run AI analysis for entities</li>
             <li>Assign officer and set priority</li>
           </ul>
         </article>
-        <article className="rounded-2xl border border-white/70 bg-white/90 p-5 shadow-sm shadow-slate-900/5">
-          <h4 className="font-semibold text-slate-900">Tip</h4>
-          <p className="mt-2 text-sm text-slate-600">Keep descriptions specific to improve AI search matching quality.</p>
+        <article className="cims-card p-5">
+          <h4 className="text-text-primary font-semibold">Tip</h4>
+          <p className="text-text-secondary mt-2 text-sm">Keep descriptions specific to improve AI search matching quality.</p>
         </article>
       </aside>
     </div>

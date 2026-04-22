@@ -60,31 +60,31 @@ export default function LoginPage() {
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md items-center px-4">
-      <div className="w-full rounded-3xl border border-white/60 bg-white/90 p-8 shadow-xl shadow-slate-900/10 backdrop-blur">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Secure Access</p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-900">Welcome Back</h1>
-        <p className="mt-2 text-sm text-slate-500">Sign in to continue managing investigation workflows.</p>
+      <div className="cims-card w-full p-8 backdrop-blur">
+        <p className="text-text-secondary text-xs font-semibold uppercase tracking-[0.2em]">Secure Access</p>
+        <h1 className="text-text-primary mt-2 text-3xl font-semibold">Welcome Back</h1>
+        <p className="text-text-secondary mt-2 text-sm">Sign in to continue managing investigation workflows.</p>
 
         <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
           <label className="block">
-            <span className="mb-2 block text-sm font-medium text-slate-700">Email</span>
+            <span className="text-text-primary mb-2 block text-sm font-medium">Email</span>
             <input
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="officer@department.gov"
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900"
+              className="cims-input w-full px-4 py-3 text-sm"
             />
           </label>
 
           <label className="block">
-            <span className="mb-2 block text-sm font-medium text-slate-700">Password</span>
+            <span className="text-text-primary mb-2 block text-sm font-medium">Password</span>
             <input
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               placeholder="********"
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900"
+              className="cims-input w-full px-4 py-3 text-sm"
             />
           </label>
 
@@ -93,15 +93,15 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+            className="cims-button-primary w-full px-4 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isLoading ? "Signing In..." : "Sign In"}
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-slate-500">
+        <p className="text-text-secondary mt-6 text-center text-sm">
           First time here?{" "}
-          <Link href="/register" className="font-semibold text-slate-900 hover:underline">
+          <Link href="/register" className="text-primary font-semibold hover:underline">
             Create an account
           </Link>
         </p>
