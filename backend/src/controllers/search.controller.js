@@ -1,26 +1,40 @@
-import mongoose from "mongoose";
-
 import Case from "../models/case.model.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { searchSimilarCases } from "../utils/pythonAiClient.js";
 
-const normalizeSimilarCaseIds = (payload) => {
-  const candidateIds =
-    payload?.similar_case_ids || payload?.caseIds || payload?.ids || [];
+const normalizeSimilarMatches = (payload, casePoolLength) => {
+  const matches = Array.isArray(payload?.matches) ? payload.matches : [];
 
-  if (!Array.isArray(candidateIds)) {
-    return [];
-  }
+  return matches
+    .map((match) => {
+      if (!match || typeof match !== "object") {
+        return null;
+      }
 
-  return candidateIds.filter((id) => mongoose.Types.ObjectId.isValid(id));
+      const index = Number(match.index);
+      const similarity = Number(match.similarity);
+
+      if (!Number.isInteger(index) || index < 0 || index >= casePoolLength) {
+        return null;
+      }
+
+      if (!Number.isFinite(similarity)) {
+        return null;
+      }
+
+      return { index, similarity };
+    })
+    .filter(Boolean);
 };
 
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const buildFilter = ({ location, crime_type, ids }) => {
-  const filter = {
-    _id: { $in: ids },
-  };
+  const filter = {};
+
+  if (Array.isArray(ids)) {
+    filter._id = { $in: ids };
+  }
 
   if (typeof location === "string" && location.trim()) {
     filter.location = new RegExp(`^${escapeRegExp(location.trim())}$`, "i");
@@ -50,13 +64,32 @@ export const searchCases = asyncHandler(async (req, res) => {
     });
   }
 
+  const candidateCases = await Case.find(
+    buildFilter({
+      location: normalizedLocation,
+      crime_type: normalizedCrimeType,
+    })
+  ).lean();
+
+  const casesWithEmbeddings = candidateCases.filter(
+    (caseItem) => Array.isArray(caseItem.embedding) && caseItem.embedding.length > 0
+  );
+
+  if (!casesWithEmbeddings.length) {
+    return res.status(200).json({
+      count: 0,
+      cases: [],
+      similarCaseIds: [],
+    });
+  }
+
   const aiResult = await searchSimilarCases({
     query: query.trim(),
-    location: normalizedLocation,
-    crime_type: normalizedCrimeType,
+    stored_embeddings: casesWithEmbeddings.map((caseItem) => caseItem.embedding),
   });
 
-  const similarCaseIds = normalizeSimilarCaseIds(aiResult).slice(0, 5);
+  const matches = normalizeSimilarMatches(aiResult, casesWithEmbeddings.length).slice(0, 5);
+  const similarCaseIds = matches.map((match) => casesWithEmbeddings[match.index]._id.toString());
 
   if (!similarCaseIds.length) {
     return res.status(200).json({
@@ -66,9 +99,7 @@ export const searchCases = asyncHandler(async (req, res) => {
     });
   }
 
-  const cases = await Case.find(
-    buildFilter({ location: normalizedLocation, crime_type: normalizedCrimeType, ids: similarCaseIds })
-  );
+  const cases = await Case.find({ _id: { $in: similarCaseIds } });
   const orderedCases = orderCasesById(cases, similarCaseIds).slice(0, 5);
 
   return res.status(200).json({

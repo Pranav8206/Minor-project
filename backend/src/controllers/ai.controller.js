@@ -4,6 +4,32 @@ import Case from "../models/case.model.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { analyzeCaseDescription } from "../utils/pythonAiClient.js";
 
+const mapAiEntitiesToCaseEntities = (entitiesPayload) => {
+  if (!entitiesPayload || typeof entitiesPayload !== "object") {
+    return [];
+  }
+
+  const categories = [
+    { key: "persons", label: "PERSON", type: "person" },
+    { key: "locations", label: "LOCATION", type: "location" },
+    { key: "weapons", label: "WEAPON", type: "weapon" },
+  ];
+
+  return categories.flatMap((category) => {
+    const values = Array.isArray(entitiesPayload[category.key])
+      ? entitiesPayload[category.key]
+      : [];
+
+    return values
+      .filter((value) => typeof value === "string" && value.trim())
+      .map((value) => ({
+        label: category.label,
+        value: value.trim(),
+        type: category.type,
+      }));
+  });
+};
+
 export const analyzeCase = asyncHandler(async (req, res) => {
   const { caseId, description } = req.body;
 
@@ -27,7 +53,7 @@ export const analyzeCase = asyncHandler(async (req, res) => {
 
   const aiResult = await analyzeCaseDescription(description.trim());
   const embedding = Array.isArray(aiResult.embedding) ? aiResult.embedding : [];
-  const entities = Array.isArray(aiResult.entities) ? aiResult.entities : [];
+  const entities = mapAiEntitiesToCaseEntities(aiResult.entities);
 
   const updatedCase = await Case.findByIdAndUpdate(
     caseId,

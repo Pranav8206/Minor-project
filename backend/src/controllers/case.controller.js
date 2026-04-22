@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import Case from "../models/case.model.js";
 import Suspect from "../models/suspect.model.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import { analyzeCaseDescription, searchSimilarCases } from "../utils/pythonAiClient.js";
 import calculateRiskScore from "../utils/riskScore.js";
 
 const sanitizePayload = (payload) =>
@@ -18,6 +19,83 @@ const normalizeTags = (value) => {
   return value
     .map((tag) => (typeof tag === "string" ? tag.trim() : ""))
     .filter(Boolean);
+};
+
+const normalizeEmbedding = (value) => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => Number(item))
+    .filter((item) => Number.isFinite(item));
+};
+
+const normalizeCaseEntities = (value) => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entity) => {
+      if (!entity || typeof entity !== "object") {
+        return null;
+      }
+
+      const label = typeof entity.label === "string" ? entity.label.trim() : "";
+      const entityValue = typeof entity.value === "string" ? entity.value.trim() : "";
+      const type = typeof entity.type === "string" ? entity.type.trim() : undefined;
+
+      if (!label || !entityValue) {
+        return null;
+      }
+
+      return {
+        label,
+        value: entityValue,
+        type,
+      };
+    })
+    .filter(Boolean);
+};
+
+const mapAiEntitiesToCaseEntities = (entitiesPayload) => {
+  if (!entitiesPayload || typeof entitiesPayload !== "object") {
+    return [];
+  }
+
+  const mappedEntities = [];
+
+  const categories = [
+    { key: "persons", label: "PERSON", type: "person" },
+    { key: "locations", label: "LOCATION", type: "location" },
+    { key: "weapons", label: "WEAPON", type: "weapon" },
+  ];
+
+  for (const category of categories) {
+    const values = Array.isArray(entitiesPayload[category.key])
+      ? entitiesPayload[category.key]
+      : [];
+
+    for (const rawValue of values) {
+      if (typeof rawValue !== "string") {
+        continue;
+      }
+
+      const value = rawValue.trim();
+      if (!value) {
+        continue;
+      }
+
+      mappedEntities.push({
+        label: category.label,
+        value,
+        type: category.type,
+      });
+    }
+  }
+
+  return normalizeCaseEntities(mappedEntities);
 };
 
 const normalizeSuspects = (value) => {
@@ -172,6 +250,21 @@ const parseCasePayload = (body, { partial = false } = {}) => {
 
 export const createCase = asyncHandler(async (req, res) => {
   const caseData = parseCasePayload(req.body);
+  const normalizedDescription =
+    typeof caseData.description === "string" ? caseData.description.trim() : "";
+
+  if (!normalizedDescription) {
+    return res.status(400).json({
+      message: "description is required",
+    });
+  }
+
+  caseData.description = normalizedDescription;
+
+  const aiResult = await analyzeCaseDescription(caseData.description);
+  caseData.embedding = normalizeEmbedding(aiResult?.embedding);
+  caseData.entities = mapAiEntitiesToCaseEntities(aiResult?.entities);
+
   const createdCase = await Case.create(caseData);
 
   if (Array.isArray(caseData.suspects) && caseData.suspects.length > 0) {
@@ -183,6 +276,109 @@ export const createCase = asyncHandler(async (req, res) => {
   return res.status(201).json({
     message: "Case created successfully",
     case: createdCase,
+  });
+});
+
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const buildCaseSimilarityFilter = ({ location, crime_type }) => {
+  const filter = {};
+
+  if (typeof location === "string" && location.trim()) {
+    filter.location = new RegExp(`^${escapeRegExp(location.trim())}$`, "i");
+  }
+
+  if (typeof crime_type === "string" && crime_type.trim()) {
+    filter.crime_type = new RegExp(`^${escapeRegExp(crime_type.trim())}$`, "i");
+  }
+
+  return filter;
+};
+
+export const getSimilarCases = asyncHandler(async (req, res) => {
+  const { query, location, crime_type } = req.body;
+
+  if (!query || typeof query !== "string" || !query.trim()) {
+    return res.status(400).json({
+      message: "query is required",
+    });
+  }
+
+  const candidateFilter = buildCaseSimilarityFilter({ location, crime_type });
+  const candidateCases = await Case.find(candidateFilter).lean();
+
+  const casesWithEmbeddings = candidateCases.filter(
+    (caseItem) => Array.isArray(caseItem.embedding) && caseItem.embedding.length > 0
+  );
+
+  if (!casesWithEmbeddings.length) {
+    return res.status(200).json({
+      count: 0,
+      results: [],
+    });
+  }
+
+  const aiResult = await searchSimilarCases({
+    query: query.trim(),
+    stored_embeddings: casesWithEmbeddings.map((caseItem) => caseItem.embedding),
+  });
+
+  const matches = Array.isArray(aiResult?.matches) ? aiResult.matches : [];
+
+  const matchedEntries = matches
+    .map((match) => {
+      if (!match || typeof match !== "object") {
+        return null;
+      }
+
+      const index = Number(match.index);
+      const similarity = Number(match.similarity);
+
+      if (!Number.isInteger(index) || index < 0 || index >= casesWithEmbeddings.length) {
+        return null;
+      }
+
+      if (!Number.isFinite(similarity)) {
+        return null;
+      }
+
+      return {
+        caseId: casesWithEmbeddings[index]._id.toString(),
+        similarity,
+      };
+    })
+    .filter(Boolean);
+
+  if (!matchedEntries.length) {
+    return res.status(200).json({
+      count: 0,
+      results: [],
+    });
+  }
+
+  const matchedIds = matchedEntries.map((entry) => entry.caseId);
+  const matchedCases = await Case.find({ _id: { $in: matchedIds } });
+  const caseMap = new Map(
+    matchedCases.map((caseItem) => [caseItem._id.toString(), caseItem])
+  );
+
+  const results = matchedEntries
+    .map((entry) => {
+      const caseItem = caseMap.get(entry.caseId);
+      if (!caseItem) {
+        return null;
+      }
+
+      return {
+        similarity: entry.similarity,
+        case: caseItem,
+      };
+    })
+    .filter(Boolean);
+
+  return res.status(200).json({
+    count: results.length,
+    results,
   });
 });
 

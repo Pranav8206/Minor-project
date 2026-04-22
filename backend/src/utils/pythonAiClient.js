@@ -22,13 +22,12 @@ export const callPythonAiService = async (endpoint, payload) => {
 };
 
 export const analyzeCaseDescription = async (description) => {
-  return callPythonAiService("/analyze", { description });
+  return callPythonAiService("/analyze", { text: description });
 };
 
-export const searchSimilarCases = async ({ query, location, crime_type }) => {
-  return callPythonAiService("/search", {
+export const searchSimilarCases = async ({ query, stored_embeddings = [] }) => {
+  return callPythonAiService("/similar", {
     query,
-    location,
-    crime_type,
+    stored_embeddings,
   });
 };
