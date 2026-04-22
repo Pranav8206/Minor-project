@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const navItems = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/cases", label: "Cases" },
+  { href: "/heatmap", label: "Heatmap" },
   { href: "/add-case", label: "Add Case" },
   { href: "/search", label: "Search" },
 ];
@@ -13,6 +14,7 @@ const navItems = [
 const topBarMap = {
   "/dashboard": "Investigation Dashboard",
   "/cases": "Case List",
+  "/heatmap": "Crime Heatmap",
   "/add-case": "Create New Case",
   "/search": "Intelligent Search",
   "/login": "Sign In",
@@ -21,7 +23,7 @@ const topBarMap = {
 export default function AppShell({ children }) {
   const pathname = usePathname();
 
-  if (pathname === "/login") {
+  if (pathname === "/login" || pathname === "/register") {
     return (
       <div className="min-h-screen bg-[radial-gradient(circle_at_10%_20%,#fceccf_0%,#f9f2e2_28%,#edf2ff_72%,#dce7ff_100%)]">
         {children}

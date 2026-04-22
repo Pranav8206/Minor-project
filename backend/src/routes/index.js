@@ -7,6 +7,7 @@ import caseRoutes from "./case.route.js";
 import evidenceRoutes from "./evidence.route.js";
 import healthRoute from "./health.route.js";
 import searchRoutes from "./search.route.js";
+import suspectRoutes from "./suspect.route.js";
 
 const router = Router();
 
@@ -16,6 +17,7 @@ router.use("/auth", authRoutes);
 router.use("/cases", caseRoutes);
 router.use("/evidence", evidenceRoutes);
 router.use("/search", searchRoutes);
+router.use("/suspects", suspectRoutes);
 router.use("/health", healthRoute);
 
 export default router;

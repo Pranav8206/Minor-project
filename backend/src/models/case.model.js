@@ -2,6 +2,10 @@ import mongoose from "mongoose";
 
 const suspectSchema = new mongoose.Schema(
   {
+    suspect_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Suspect",
+    },
     name: {
       type: String,
       required: true,
@@ -76,6 +80,21 @@ const entitySchema = new mongoose.Schema(
   { _id: false }
 );
 
+const timelineEventSchema = new mongoose.Schema(
+  {
+    date: {
+      type: Date,
+      required: true,
+    },
+    event: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+  },
+  { _id: false }
+);
+
 const caseSchema = new mongoose.Schema(
   {
     title: {
@@ -93,6 +112,18 @@ const caseSchema = new mongoose.Schema(
       required: [true, "Location is required"],
       trim: true,
     },
+    coordinates: {
+      latitude: {
+        type: Number,
+        min: -90,
+        max: 90,
+      },
+      longitude: {
+        type: Number,
+        min: -180,
+        max: 180,
+      },
+    },
     date: {
       type: Date,
       required: [true, "Date is required"],
@@ -101,6 +132,20 @@ const caseSchema = new mongoose.Schema(
       type: String,
       required: [true, "Crime type is required"],
       trim: true,
+    },
+    priority: {
+      type: String,
+      enum: ["Low", "Medium", "High"],
+      default: "Medium",
+    },
+    tags: {
+      type: [String],
+      default: [],
+    },
+    case_summary: {
+      type: String,
+      trim: true,
+      maxlength: 500,
     },
     status: {
       type: String,
@@ -126,6 +171,10 @@ const caseSchema = new mongoose.Schema(
     },
     entities: {
       type: [entitySchema],
+      default: [],
+    },
+    timeline: {
+      type: [timelineEventSchema],
       default: [],
     },
   },

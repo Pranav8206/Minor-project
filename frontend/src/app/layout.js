@@ -1,5 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import AppShell from "../components/layout/AppShell";
+import "leaflet/dist/leaflet.css";
 import "./globals.css";
 
 const geistSans = Geist({

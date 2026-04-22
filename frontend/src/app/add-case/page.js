@@ -9,6 +9,8 @@ const initialForm = {
   title: "",
   description: "",
   location: "",
+  latitude: "",
+  longitude: "",
   date: "",
   crime_type: "",
   status: "open",
@@ -58,6 +60,8 @@ export default function AddCasePage() {
       title: formData.title.trim(),
       description: formData.description.trim(),
       location: formData.location.trim(),
+      latitude: formData.latitude,
+      longitude: formData.longitude,
       date: formData.date,
       crime_type: formData.crime_type.trim(),
       status: formData.status,
@@ -115,6 +119,24 @@ export default function AddCasePage() {
             onChange={onChange}
             className="rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900"
             placeholder="Crime type"
+          />
+          <input
+            name="latitude"
+            value={formData.latitude}
+            onChange={onChange}
+            type="number"
+            step="any"
+            className="rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900"
+            placeholder="Latitude (e.g. 28.6139)"
+          />
+          <input
+            name="longitude"
+            value={formData.longitude}
+            onChange={onChange}
+            type="number"
+            step="any"
+            className="rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900"
+            placeholder="Longitude (e.g. 77.2090)"
           />
           <input
             name="date"
