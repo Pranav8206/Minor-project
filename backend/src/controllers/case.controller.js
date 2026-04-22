@@ -295,6 +295,31 @@ const buildCaseSimilarityFilter = ({ location, crime_type }) => {
   return filter;
 };
 
+const normalizeSimilarMatches = (payload, casePoolLength) => {
+  const matches = Array.isArray(payload?.matches) ? payload.matches : [];
+
+  return matches
+    .map((match) => {
+      if (!match || typeof match !== "object") {
+        return null;
+      }
+
+      const index = Number(match.index);
+      const similarity = Number(match.similarity);
+
+      if (!Number.isInteger(index) || index < 0 || index >= casePoolLength) {
+        return null;
+      }
+
+      if (!Number.isFinite(similarity)) {
+        return null;
+      }
+
+      return { index, similarity };
+    })
+    .filter(Boolean);
+};
+
 export const getSimilarCases = asyncHandler(async (req, res) => {
   const { query, location, crime_type } = req.body;
 
@@ -323,30 +348,11 @@ export const getSimilarCases = asyncHandler(async (req, res) => {
     stored_embeddings: casesWithEmbeddings.map((caseItem) => caseItem.embedding),
   });
 
-  const matches = Array.isArray(aiResult?.matches) ? aiResult.matches : [];
-
-  const matchedEntries = matches
-    .map((match) => {
-      if (!match || typeof match !== "object") {
-        return null;
-      }
-
-      const index = Number(match.index);
-      const similarity = Number(match.similarity);
-
-      if (!Number.isInteger(index) || index < 0 || index >= casesWithEmbeddings.length) {
-        return null;
-      }
-
-      if (!Number.isFinite(similarity)) {
-        return null;
-      }
-
-      return {
-        caseId: casesWithEmbeddings[index]._id.toString(),
-        similarity,
-      };
-    })
+  const matchedEntries = normalizeSimilarMatches(aiResult, casesWithEmbeddings.length)
+    .map((match) => ({
+      caseId: casesWithEmbeddings[match.index]._id.toString(),
+      similarity: match.similarity,
+    }))
     .filter(Boolean);
 
   if (!matchedEntries.length) {
@@ -379,6 +385,124 @@ export const getSimilarCases = asyncHandler(async (req, res) => {
   return res.status(200).json({
     count: results.length,
     results,
+  });
+});
+
+export const getCaseRecommendations = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({
+      message: "Invalid case id",
+    });
+  }
+
+  const caseItem = await Case.findById(id).lean();
+
+  if (!caseItem) {
+    return res.status(404).json({
+      message: "Case not found",
+    });
+  }
+
+  const recommendations = [];
+  const queryText =
+    (typeof caseItem.description === "string" && caseItem.description.trim()) ||
+    (typeof caseItem.case_summary === "string" && caseItem.case_summary.trim()) ||
+    (typeof caseItem.title === "string" && caseItem.title.trim()) ||
+    "";
+
+  let matchedSimilarCases = [];
+
+  if (queryText) {
+    const candidateCases = await Case.find({ _id: { $ne: caseItem._id } }).lean();
+    const casesWithEmbeddings = candidateCases.filter(
+      (candidate) => Array.isArray(candidate.embedding) && candidate.embedding.length > 0
+    );
+
+    if (casesWithEmbeddings.length > 0) {
+      const aiResult = await searchSimilarCases({
+        query: queryText,
+        stored_embeddings: casesWithEmbeddings.map((candidate) => candidate.embedding),
+      });
+
+      const similarMatches = normalizeSimilarMatches(aiResult, casesWithEmbeddings.length);
+      matchedSimilarCases = similarMatches
+        .map((match) => ({
+          caseId: casesWithEmbeddings[match.index]._id,
+          similarity: match.similarity,
+          date: casesWithEmbeddings[match.index].date,
+        }))
+        .filter(Boolean);
+    }
+  }
+
+  const similarCaseIds = matchedSimilarCases.map((item) => item.caseId.toString());
+  const similarCaseIdSet = new Set(similarCaseIds);
+
+  if (similarCaseIds.length > 0) {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const hasRecentPattern = matchedSimilarCases.some((item) => {
+      const caseDate = new Date(item.date);
+      return !Number.isNaN(caseDate.getTime()) && caseDate >= sevenDaysAgo;
+    });
+
+    if (hasRecentPattern) {
+      recommendations.push("Similar pattern found in last 7 days");
+    }
+  }
+
+  const suspectIds = Array.isArray(caseItem.suspects)
+    ? caseItem.suspects
+        .map((suspect) => suspect?.suspect_id)
+        .filter((suspectId) => mongoose.Types.ObjectId.isValid(suspectId))
+    : [];
+
+  if (suspectIds.length > 0 && similarCaseIdSet.size > 0) {
+    const suspects = await Suspect.find({ _id: { $in: suspectIds } }).lean();
+
+    for (const suspect of suspects) {
+      const linkedCases = Array.isArray(suspect.linked_cases) ? suspect.linked_cases : [];
+      const linkedSimilarCount = linkedCases.reduce((count, linkedCaseId) => {
+        const key = linkedCaseId.toString();
+        return similarCaseIdSet.has(key) ? count + 1 : count;
+      }, 0);
+
+      if (linkedSimilarCount > 0) {
+        recommendations.push(
+          `Check suspect ${suspect.name} (linked to ${linkedSimilarCount} similar cases)`
+        );
+      }
+    }
+  }
+
+  if (typeof caseItem.location === "string" && caseItem.location.trim()) {
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const locationTrendCount = await Case.countDocuments({
+      _id: { $ne: caseItem._id },
+      location: new RegExp(`^${escapeRegExp(caseItem.location.trim())}$`, "i"),
+      date: { $gte: thirtyDaysAgo },
+    });
+
+    if (locationTrendCount >= 3) {
+      recommendations.push("High crime area detected");
+    }
+  }
+
+  const uniqueRecommendations = [...new Set(recommendations)];
+
+  if (uniqueRecommendations.length === 0) {
+    uniqueRecommendations.push("No strong recommendation signals detected yet");
+  }
+
+  return res.status(200).json({
+    caseId: caseItem._id,
+    recommendationCount: uniqueRecommendations.length,
+    recommendations: uniqueRecommendations,
+    context: {
+      similarCasesFound: matchedSimilarCases.length,
+      location: caseItem.location,
+    },
   });
 });
 
