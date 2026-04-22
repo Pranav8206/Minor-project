@@ -5,6 +5,7 @@ A production-oriented FastAPI microservice for case text analysis.
 ## Features
 
 - `POST /analyze`
+- `POST /similar` (cosine similarity, top 5)
 - Embeddings with `sentence-transformers/all-MiniLM-L6-v2`
 - Entity extraction with spaCy (`persons`, `locations`)
 - Weapon keyword extraction via spaCy PhraseMatcher
@@ -30,6 +31,30 @@ A production-oriented FastAPI microservice for case text analysis.
   }
 }
 ```
+
+## Similarity Endpoint
+
+Request:
+
+```json
+{
+  "query": "masked robbery near station",
+  "stored_embeddings": [[0.1, 0.2], [0.3, 0.4], [0.9, 0.1]]
+}
+```
+
+Response:
+
+```json
+{
+  "matches": [
+    { "index": 2, "similarity": 0.9812 },
+    { "index": 1, "similarity": 0.7033 }
+  ]
+}
+```
+
+The service returns up to 5 matches sorted by highest cosine similarity.
 
 ## Setup
 
