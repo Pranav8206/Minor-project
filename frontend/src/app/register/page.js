@@ -111,8 +111,8 @@ export default function RegisterPage() {
             />
           </label>
 
-          {error ? <p className="text-sm font-medium text-rose-600">{error}</p> : null}
-          {message ? <p className="text-sm font-medium text-emerald-600">{message}</p> : null}
+          {error ? <p className="text-sm font-medium text-primary">{error}</p> : null}
+          {message ? <p className="text-sm font-medium text-text-secondary">{message}</p> : null}
 
           <button
             type="submit"

@@ -332,6 +332,92 @@ const uploadIncomingEvidenceFiles = async (files = []) => {
   }
 };
 
+const normalizePaginationValue = (value, fallback, minimum, maximum) => {
+  const parsedValue = Number.parseInt(value, 10);
+
+  if (!Number.isFinite(parsedValue)) {
+    return fallback;
+  }
+
+  return Math.max(minimum, Math.min(maximum, parsedValue));
+};
+
+const normalizeStatusFilter = (value) => {
+  if (typeof value !== "string" || !value.trim()) {
+    return "";
+  }
+
+  const normalized = value.trim().toLowerCase();
+
+  if (normalized === "pending_review" || normalized === "pending review") {
+    return "investigating";
+  }
+
+  return normalized;
+};
+
+const buildCaseListFilter = (query) => {
+  const filter = {};
+
+  const status = normalizeStatusFilter(query.status);
+  if (status) {
+    filter.status = status;
+  }
+
+  if (typeof query.crime_type === "string" && query.crime_type.trim()) {
+    filter.crime_type = new RegExp(`^${escapeRegExp(query.crime_type.trim())}$`, "i");
+  }
+
+  if (typeof query.search === "string" && query.search.trim()) {
+    const searchValue = query.search.trim();
+    const searchRegex = new RegExp(escapeRegExp(searchValue), "i");
+    filter.$or = [
+      { title: searchRegex },
+      { description: searchRegex },
+      { "suspects.name": searchRegex },
+    ];
+  }
+
+  const dateFilter = {};
+
+  if (typeof query.startDate === "string" && query.startDate.trim()) {
+    const startDate = new Date(query.startDate);
+    if (!Number.isNaN(startDate.getTime())) {
+      startDate.setHours(0, 0, 0, 0);
+      dateFilter.$gte = startDate;
+    }
+  }
+
+  if (typeof query.endDate === "string" && query.endDate.trim()) {
+    const endDate = new Date(query.endDate);
+    if (!Number.isNaN(endDate.getTime())) {
+      endDate.setHours(23, 59, 59, 999);
+      dateFilter.$lte = endDate;
+    }
+  }
+
+  if (Object.keys(dateFilter).length > 0) {
+    filter.date = dateFilter;
+  }
+
+  return filter;
+};
+
+const parseQueryDate = (value, { endOfDay = false } = {}) => {
+  if (typeof value !== "string" || !value.trim()) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  parsed.setHours(endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0);
+  return parsed;
+};
+
 const parseCasePayload = (body, { partial = false } = {}) => {
   const latitude = normalizeCoordinate(body.latitude);
   const longitude = normalizeCoordinate(body.longitude);
@@ -486,6 +572,10 @@ const generateCaseSummary = ({
 export const createCase = asyncHandler(async (req, res) => {
   const caseData = parseCasePayload(req.body);
   const uploadedEvidence = await uploadIncomingEvidenceFiles(req.files);
+
+  if (caseData.assigned_officer === undefined && req.user?._id) {
+    caseData.assigned_officer = req.user._id;
+  }
 
   if (uploadedEvidence.length > 0) {
     caseData.evidence = [...(Array.isArray(caseData.evidence) ? caseData.evidence : []), ...uploadedEvidence];
@@ -756,11 +846,40 @@ export const getCaseRecommendations = asyncHandler(async (req, res) => {
 });
 
 export const getCases = asyncHandler(async (req, res) => {
-  const cases = await Case.find().sort({ createdAt: -1 });
+  const page = normalizePaginationValue(req.query.page, 1, 1, 1000000);
+  const limit = normalizePaginationValue(req.query.limit, 10, 1, 100);
+  const startDate = parseQueryDate(req.query.startDate);
+  const endDate = parseQueryDate(req.query.endDate, { endOfDay: true });
+
+  if (startDate && endDate && startDate > endDate) {
+    return res.status(400).json({
+      message: "startDate must be earlier than or equal to endDate",
+    });
+  }
+
+  const filter = buildCaseListFilter(req.query);
+
+  const total = await Case.countDocuments(filter);
+  const totalPages = total > 0 ? Math.ceil(total / limit) : 0;
+  const currentPage = totalPages > 0 ? Math.min(page, totalPages) : 1;
+  const hasNext = totalPages > 0 && currentPage < totalPages;
+  const hasPrev = totalPages > 0 && currentPage > 1;
+
+  const cases = await Case.find(filter)
+    .populate("assigned_officer", "name role email")
+    .sort({ createdAt: -1 })
+    .skip((currentPage - 1) * limit)
+    .limit(limit)
+    .lean();
 
   return res.status(200).json({
-    count: cases.length,
     cases,
+    total,
+    page: currentPage,
+    totalPages,
+    limit,
+    hasNext,
+    hasPrev,
   });
 });
 
@@ -796,6 +915,7 @@ export const updateCase = asyncHandler(async (req, res) => {
   }
 
   const updateData = parseCasePayload(req.body, { partial: true });
+  const uploadedEvidence = await uploadIncomingEvidenceFiles(req.files);
 
   const existingCase = await Case.findById(id);
 
@@ -803,6 +923,15 @@ export const updateCase = asyncHandler(async (req, res) => {
     return res.status(404).json({
       message: "Case not found",
     });
+  }
+
+  if (uploadedEvidence.length > 0) {
+    const evidenceBase = Array.isArray(updateData.evidence)
+      ? updateData.evidence
+      : Array.isArray(existingCase.evidence)
+      ? existingCase.evidence
+      : [];
+    updateData.evidence = [...evidenceBase, ...uploadedEvidence];
   }
 
   const shouldAutoGenerateSummary =
@@ -837,6 +966,10 @@ export const updateCase = asyncHandler(async (req, res) => {
       message: "No changes detected",
       case: existingCase,
     });
+  }
+
+  if (Array.isArray(changedData.suspects)) {
+    changedData.suspects = await syncSuspectsForCase(existingCase._id, changedData.suspects);
   }
 
   const updatedCase = await Case.findByIdAndUpdate(id, changedData, {

@@ -30,11 +30,11 @@ export default function Home() {
   const hasToken = useSyncExternalStore(subscribeAuth, getAuthSnapshot, () => false);
 
   return (
-    <div className="min-h-screen bg-radial-[140%_90%_at_50%_10%] from-orange-100 via-background to-background">
+    <div className="min-h-screen bg-radial-[140%_90%_at_50%_10%] from-card via-background to-background">
       <header className="sticky top-0 z-30 border-b border-border/70 bg-card/85 backdrop-blur">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
           <Link href="/" className="flex items-center gap-3">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-orange-600 to-orange-700 text-lg font-bold text-white">
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-lg font-bold text-white">
               C
             </span>
             <span className="text-text-primary text-lg font-semibold tracking-tight">CIMS</span>
@@ -43,7 +43,7 @@ export default function Home() {
           {hasToken ? (
             <Link
               href="/dashboard"
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-700"
+              className="cims-button-primary text-sm"
             >
               Go to Dashboard
             </Link>
@@ -57,7 +57,7 @@ export default function Home() {
               </Link>
               <Link
                 href="/register"
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-700"
+                className="cims-button-primary text-sm"
               >
                 Sign Up
               </Link>
@@ -67,19 +67,19 @@ export default function Home() {
       </header>
 
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-14 sm:px-6">
-        <section className="rounded-3xl border border-border/70 bg-linear-to-br from-orange-700 via-orange-600 to-amber-600 p-8 text-white shadow-lg shadow-orange-900/20 sm:p-10">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-orange-50/90">Crime Investigation Management System</p>
+        <section className="rounded-3xl border border-border bg-card p-8 shadow-lg shadow-black/20 sm:p-10">
+          <p className="text-text-secondary text-xs font-semibold uppercase tracking-[0.2em]">Crime Investigation Management System</p>
           <h1 className="mt-3 max-w-3xl text-3xl font-semibold leading-tight sm:text-5xl">
             Investigate Faster. Coordinate Better. Close Cases with Confidence.
           </h1>
-          <p className="mt-4 max-w-2xl text-sm text-orange-50/95 sm:text-base">
+          <p className="text-text-secondary mt-4 max-w-2xl text-sm sm:text-base">
             CIMS helps investigation teams manage cases, suspects, evidence, and timelines in one focused workspace with AI-assisted search and recommendations.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             {hasToken ? (
               <Link
                 href="/dashboard"
-                className="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-orange-700 transition hover:bg-orange-50"
+                className="cims-button-primary text-sm"
               >
                 Open Dashboard
               </Link>
@@ -87,13 +87,13 @@ export default function Home() {
               <>
                 <Link
                   href="/register"
-                  className="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-orange-700 transition hover:bg-orange-50"
+                  className="cims-button-primary text-sm"
                 >
                   Create Account
                 </Link>
                 <Link
                   href="/login"
-                  className="rounded-xl border border-white/35 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/20"
+                  className="cims-button-muted text-sm"
                 >
                   Sign In
                 </Link>

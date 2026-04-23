@@ -249,13 +249,13 @@ export default function AddCasePage() {
 
       {/* Alert Messages */}
       {error && (
-        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4">
-          <p className="text-sm font-medium text-red-700">{error}</p>
+        <div className="mb-6 rounded-lg border border-border bg-card p-4">
+          <p className="text-sm font-medium text-primary">{error}</p>
         </div>
       )}
       {message && (
-        <div className="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
-          <p className="text-sm font-medium text-emerald-700">{message}</p>
+        <div className="mb-6 rounded-lg border border-border bg-card p-4">
+          <p className="text-sm font-medium text-text-secondary">{message}</p>
         </div>
       )}
 
@@ -352,7 +352,7 @@ export default function AddCasePage() {
               <button
                 type="button"
                 onClick={addSuspect}
-                className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white hover:bg-orange-700 transition"
+                className="cims-button-primary px-3 py-2 text-sm"
               >
                 <Plus size={16} />
                 Add
@@ -394,7 +394,7 @@ export default function AddCasePage() {
                     <button
                       type="button"
                       onClick={() => removeSuspect(index)}
-                      className="mt-3 inline-flex items-center gap-2 text-sm text-red-600 hover:text-red-700 transition"
+                      className="mt-3 inline-flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary transition"
                     >
                       <X size={16} />
                       Remove
@@ -444,7 +444,7 @@ export default function AddCasePage() {
                       <button
                         type="button"
                         onClick={() => removeEvidenceFile(index)}
-                        className="mt-2 inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700"
+                        className="mt-2 inline-flex items-center gap-1 text-xs text-text-secondary hover:text-text-primary"
                       >
                         <X size={14} />
                         Remove
@@ -470,7 +470,7 @@ export default function AddCasePage() {
               <button
                 type="button"
                 onClick={addTimelineStep}
-                className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white hover:bg-orange-700 transition"
+                className="cims-button-primary px-3 py-2 text-sm"
               >
                 <Plus size={16} />
                 Add Event
@@ -501,7 +501,7 @@ export default function AddCasePage() {
                     <button
                       type="button"
                       onClick={() => removeTimelineStep(index)}
-                      className="mt-3 inline-flex items-center gap-2 text-sm text-red-600 hover:text-red-700 transition"
+                      className="mt-3 inline-flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary transition"
                     >
                       <X size={16} />
                       Remove
@@ -549,7 +549,7 @@ export default function AddCasePage() {
             </p>
           </article>
 
-          <article className="cims-card p-5 border-l-4 border-orange-500">
+          <article className="cims-card p-5 border-l-4 border-primary">
             <h4 className="text-text-primary font-semibold text-sm">Auto-Conversion</h4>
             <p className="text-text-secondary mt-2 text-xs leading-relaxed">
               Form data is automatically converted to structured JSON before sending to the backend.

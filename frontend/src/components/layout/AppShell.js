@@ -63,6 +63,14 @@ export default function AppShell({ children }) {
     );
   }
 
+  if (pathname === "/cases") {
+    return (
+      <div className="bg-background text-text-primary min-h-screen">
+        {children}
+      </div>
+    );
+  }
+
   if (!mounted) {
     return null;
   }
@@ -71,9 +79,9 @@ export default function AppShell({ children }) {
     <div className="bg-background text-text-primary min-h-screen">
       <div className="mx-auto flex min-h-screen w-full max-w-400">
         {/* Desktop Sidebar */}
-        <aside className="hidden lg:block w-20 border-r border-border/90 bg-card/90 p-4 backdrop-blur flex flex-col">
+        <aside className="hidden w-20 border-r border-border/90 bg-card/90 p-4 backdrop-blur lg:flex flex-col">
           <div className="flex flex-col items-center gap-2 mb-8 pb-6 border-b border-border/50">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-600 to-orange-700 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
               <span className="text-white font-bold text-lg">C</span>
             </div>
             <p className="text-text-secondary text-xs font-semibold text-center">CIMS</p>
@@ -91,8 +99,8 @@ export default function AppShell({ children }) {
                   title={item.label}
                   className={`flex flex-col items-center gap-1 rounded-lg px-3 py-3 transition ${
                     isActive
-                      ? "bg-primary text-white shadow-lg shadow-orange-800/20"
-                      : "text-text-secondary hover:bg-orange-50 hover:text-text-primary"
+                      ? "bg-primary text-white"
+                      : "text-text-secondary hover:bg-background hover:text-text-primary"
                   }`}
                 >
                   <Icon size={20} />
@@ -105,7 +113,7 @@ export default function AppShell({ children }) {
           <button
             onClick={handleLogout}
             title="Logout"
-            className="flex flex-col items-center gap-1 rounded-lg px-3 py-3 text-text-secondary hover:bg-red-50 hover:text-red-600 transition mt-auto"
+            className="flex flex-col items-center gap-1 rounded-lg px-3 py-3 text-text-secondary hover:bg-background hover:text-text-primary transition mt-auto"
           >
             <LogOut size={20} />
             <span className="text-xs font-medium">Logout</span>
@@ -117,7 +125,7 @@ export default function AppShell({ children }) {
           <header className="sticky top-0 z-30 border-b border-border/80 bg-card/90 px-4 py-4 backdrop-blur flex items-center justify-between">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-orange-50 rounded-lg transition"
+              className="p-2 hover:bg-background rounded-lg transition"
             >
               {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
@@ -127,7 +135,7 @@ export default function AppShell({ children }) {
             </div>
             <button
               onClick={handleLogout}
-              className="p-2 hover:bg-red-50 rounded-lg transition text-red-600"
+              className="p-2 hover:bg-background rounded-lg transition text-text-secondary"
             >
               <LogOut size={20} />
             </button>
@@ -148,8 +156,8 @@ export default function AppShell({ children }) {
                       onClick={() => setSidebarOpen(false)}
                       className={`flex items-center gap-3 rounded-lg px-4 py-3 transition ${
                         isActive
-                          ? "bg-primary text-white shadow-lg shadow-orange-800/20"
-                          : "text-text-secondary hover:bg-orange-50 hover:text-text-primary"
+                          ? "bg-primary text-white"
+                          : "text-text-secondary hover:bg-background hover:text-text-primary"
                       }`}
                     >
                       <Icon size={20} />
@@ -171,7 +179,7 @@ export default function AppShell({ children }) {
             </div>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-100"
+              className="cims-button-muted text-sm"
             >
               <LogOut size={16} />
               Logout
