@@ -162,6 +162,11 @@ const caseSchema = new mongoose.Schema(
   }
 );
 
+caseSchema.index({ createdAt: -1 });
+caseSchema.index({ status: 1, createdAt: -1 });
+caseSchema.index({ crime_type: 1, createdAt: -1 });
+caseSchema.index({ date: -1, createdAt: -1 });
+
 const Case = mongoose.model("Case", caseSchema);
 
 export default Case;

@@ -88,7 +88,7 @@ export default function LoginPage() {
             />
           </label>
 
-          {error ? <p className="text-sm font-medium text-rose-600">{error}</p> : null}
+          {error ? <p className="text-sm font-medium text-primary">{error}</p> : null}
 
           <button
             type="submit"

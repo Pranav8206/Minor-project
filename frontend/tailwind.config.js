@@ -1,22 +1,24 @@
 /** @type {import('tailwindcss').Config} */
-module.exports = {
+export default {
   content: [
-    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/app/**/*.{js,ts,jsx,tsx}",
+    "./src/components/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
       colors: {
-        primary: "var(--color-primary)",
-        background: "var(--color-background)",
-        card: "var(--color-card)",
-        border: "var(--color-border)",
-        "text-primary": "var(--color-text-primary)",
-        "text-secondary": "var(--color-text-secondary)",
-      },
-      boxShadow: {
-        card: "0 14px 36px rgba(15, 23, 42, 0.08)",
+        background: "var(--background)",
+        card: "var(--card)",
+        primary: "var(--primary)",
+        "primary-hover": "var(--primary-hover)",
+        "text-primary": "var(--text-primary)",
+        "text-secondary": "var(--text-secondary)",
+        border: "var(--border)",
+        success: "var(--success)",
+        info: "var(--info)",
+        danger: "var(--danger)",
       },
     },
   },
+  plugins: [],
 };

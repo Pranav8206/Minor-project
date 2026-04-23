@@ -29,10 +29,10 @@ ChartJS.register(
 );
 
 const statusTone = {
-  open: "text-amber-600 bg-amber-50",
-  investigating: "text-orange-700 bg-orange-100",
-  closed: "text-emerald-600 bg-emerald-50",
-  archived: "text-text-secondary bg-background",
+  open: "text-primary bg-background border border-border",
+  investigating: "text-primary bg-background border border-border",
+  closed: "text-text-secondary bg-background border border-border",
+  archived: "text-text-secondary bg-background border border-border",
 };
 
 const formatRelativeTime = (value) => {
@@ -143,7 +143,7 @@ export default function DashboardPage() {
         {
           label: "Cases",
           data: locationStats.slice(0, 8).map((item) => item.count),
-          backgroundColor: "rgba(200, 116, 31, 0.78)",
+          backgroundColor: "var(--primary)",
           borderRadius: 10,
           borderSkipped: false,
         },
@@ -159,8 +159,8 @@ export default function DashboardPage() {
         {
           label: "Cases",
           data: timeline.map((item) => item.count),
-          borderColor: "#c8741f",
-          backgroundColor: "rgba(200, 116, 31, 0.16)",
+          borderColor: "var(--primary)",
+          backgroundColor: "var(--card)",
           tension: 0.35,
           fill: true,
           pointRadius: 4,
@@ -178,15 +178,15 @@ export default function DashboardPage() {
         {
           data: typeBreakdown.map((item) => item.count),
           backgroundColor: [
-            "#0ea5e9",
-            "#c8741f",
-            "#d28a44",
-            "#22c55e",
-            "#f59e0b",
-            "#ef4444",
-            "#9a5a19",
+            "var(--primary)",
+            "var(--text-primary)",
+            "var(--text-secondary)",
+            "var(--card)",
+            "var(--border)",
+            "var(--primary)",
+            "var(--text-secondary)",
           ],
-          borderColor: "#ffffff",
+          borderColor: "var(--background)",
           borderWidth: 2,
         },
       ],
@@ -217,15 +217,15 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       {error ? (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+        <div className="rounded-2xl border border-border bg-card px-4 py-3 text-sm font-medium text-primary">
           {error}
         </div>
       ) : null}
 
-      <div className="rounded-3xl border border-border bg-linear-to-r from-orange-700 via-orange-600 to-amber-600 px-6 py-7 text-white shadow-lg shadow-orange-900/20">
-        <p className="text-xs uppercase tracking-[0.2em] text-orange-50">CIMS Dashboard</p>
-        <h2 className="mt-2 text-2xl font-semibold">Operational Crime Intelligence</h2>
-        <p className="mt-1 text-sm text-orange-50/90">Live view of workload, hotspot behavior, and recent investigation activity.</p>
+      <div className="rounded-3xl border border-border bg-card px-6 py-7 shadow-lg shadow-black/20">
+        <p className="text-text-secondary text-xs uppercase tracking-[0.2em]">CIMS Dashboard</p>
+        <h2 className="mt-2 text-2xl font-semibold text-text-primary">Operational Crime Intelligence</h2>
+        <p className="text-text-secondary mt-1 text-sm">Live view of workload, hotspot behavior, and recent investigation activity.</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -236,12 +236,12 @@ export default function DashboardPage() {
         </article>
         <article className="cims-card p-5">
           <p className="text-text-secondary text-sm font-medium">Active cases</p>
-          <p className="mt-3 text-4xl font-semibold text-amber-600">{activeCases}</p>
+          <p className="text-text-primary mt-3 text-4xl font-semibold">{activeCases}</p>
           <p className="text-text-secondary mt-1 text-xs font-medium">Open and investigating cases</p>
         </article>
         <article className="cims-card p-5">
           <p className="text-text-secondary text-sm font-medium">High priority cases</p>
-          <p className="mt-3 text-4xl font-semibold text-rose-600">{highPriorityCases}</p>
+          <p className="text-text-primary mt-3 text-4xl font-semibold">{highPriorityCases}</p>
           <p className="text-text-secondary mt-1 text-xs font-medium">Urgent cases requiring quick response</p>
         </article>
       </div>
@@ -260,13 +260,16 @@ export default function DashboardPage() {
                 scales: {
                   y: {
                     beginAtZero: true,
-                    ticks: { precision: 0 },
+                    ticks: { precision: 0, color: "var(--text-secondary)" },
+                    grid: { color: "var(--border)" },
                   },
                   x: {
                     ticks: {
                       maxRotation: 30,
                       minRotation: 0,
+                      color: "var(--text-secondary)",
                     },
+                    grid: { color: "var(--border)" },
                   },
                 },
               }}
@@ -286,6 +289,7 @@ export default function DashboardPage() {
                 plugins: {
                   legend: {
                     position: "bottom",
+                    labels: { color: "var(--text-secondary)" },
                   },
                 },
               }}
@@ -306,7 +310,12 @@ export default function DashboardPage() {
                 scales: {
                   y: {
                     beginAtZero: true,
-                    ticks: { precision: 0 },
+                    ticks: { precision: 0, color: "var(--text-secondary)" },
+                    grid: { color: "var(--border)" },
+                  },
+                  x: {
+                    ticks: { color: "var(--text-secondary)" },
+                    grid: { color: "var(--border)" },
                   },
                 },
               }}

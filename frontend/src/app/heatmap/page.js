@@ -90,7 +90,7 @@ export default function HeatmapPage() {
       <section className="cims-card p-6">
         <h3 className="text-text-primary text-lg font-semibold">Crime Heatmap</h3>
         <p className="text-text-secondary mt-1 text-sm">Cases are plotted using stored location coordinates.</p>
-        {error ? <p className="mt-3 text-sm font-medium text-rose-600">{error}</p> : null}
+        {error ? <p className="mt-3 text-sm font-medium text-primary">{error}</p> : null}
         {!points.length ? <p className="text-text-secondary mt-3 text-sm">No coordinates found yet. Add latitude and longitude in Add Case page.</p> : null}
 
         <div className="mt-5 overflow-hidden rounded-2xl border border-border">
@@ -107,8 +107,8 @@ export default function HeatmapPage() {
                   center={[point.latitude, point.longitude]}
                   radius={12}
                   pathOptions={{
-                    color: "#dc2626",
-                    fillColor: "#ef4444",
+                    color: "var(--primary)",
+                    fillColor: "var(--primary)",
                     fillOpacity: 0.35,
                     weight: 1.5,
                   }}

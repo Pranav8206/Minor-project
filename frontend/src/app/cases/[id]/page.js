@@ -9,17 +9,17 @@ import useAuthGuard from "../../../hooks/useAuthGuard";
 import api from "../../../lib/api";
 
 const statusTone = {
-  open: "bg-amber-100 text-amber-700",
-  investigating: "bg-orange-100 text-orange-700",
-  closed: "bg-emerald-100 text-emerald-700",
-  archived: "bg-background text-text-secondary",
+  open: "bg-background border border-border text-primary",
+  investigating: "bg-background border border-border text-primary",
+  closed: "bg-background border border-border text-text-secondary",
+  archived: "bg-background border border-border text-text-secondary",
 };
 
 const priorityTone = {
-  Low: "bg-emerald-100 text-emerald-700",
-  Medium: "bg-amber-100 text-amber-700",
-  High: "bg-rose-100 text-rose-700",
-  Critical: "bg-rose-200 text-rose-800",
+  Low: "bg-background border border-border text-text-secondary",
+  Medium: "bg-background border border-border text-primary",
+  High: "bg-background border border-border text-primary",
+  Critical: "bg-background border border-border text-primary",
 };
 
 const CRIME_TYPES = [
@@ -421,7 +421,7 @@ export default function CaseDetailPage() {
 
   if (!caseItem) {
     return (
-      <div className="rounded-3xl border border-rose-200 bg-rose-50 p-6 text-sm font-medium text-rose-700">
+      <div className="rounded-3xl border border-border bg-card p-6 text-sm font-medium text-primary">
         {error || "Case not found."}
       </div>
     );
@@ -430,36 +430,36 @@ export default function CaseDetailPage() {
   return (
     <div className="space-y-6">
       {error ? (
-        <div className="rounded-3xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+        <div className="rounded-3xl border border-border bg-card px-4 py-3 text-sm font-medium text-primary">
           {error}
         </div>
       ) : null}
 
-      <section className="rounded-3xl border border-border bg-linear-to-r from-orange-700 via-orange-600 to-amber-600 px-6 py-7 text-white shadow-lg shadow-orange-900/20">
+      <section className="rounded-3xl border border-border bg-card px-6 py-7 shadow-lg shadow-black/20">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-orange-50">Case Intelligence Brief</p>
-            <h1 className="mt-2 text-2xl font-semibold leading-tight sm:text-3xl">{caseItem.title}</h1>
-            <p className="mt-2 max-w-3xl text-sm text-orange-50/95">{caseItem.case_summary || caseItem.description}</p>
+            <p className="text-text-secondary text-xs uppercase tracking-[0.2em]">Case Intelligence Brief</p>
+            <h1 className="text-text-primary mt-2 text-2xl font-semibold leading-tight sm:text-3xl">{caseItem.title}</h1>
+            <p className="text-text-secondary mt-2 max-w-3xl text-sm">{caseItem.case_summary || caseItem.description}</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={openEditModal}
-              className="rounded-xl border border-white/40 bg-white/15 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/25"
+              className="cims-button-primary text-sm"
             >
               Edit
             </button>
             <Link
               href="/cases"
-              className="rounded-xl border border-white/30 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20"
+              className="cims-button-muted text-sm"
             >
               Back to cases
             </Link>
           </div>
         </div>
         <div className="mt-5 flex flex-wrap gap-2 text-xs font-semibold">
-          <span className="rounded-full bg-white/15 px-3 py-1">ID #{caseItem._id.slice(-6).toUpperCase()}</span>
+          <span className="rounded-full bg-background border border-border px-3 py-1 text-text-secondary">ID #{caseItem._id.slice(-6).toUpperCase()}</span>
           <span className={`rounded-full px-3 py-1 ${statusTone[caseItem.status] || "bg-background text-text-secondary"}`}>
             {caseItem.status || "unknown"}
           </span>
@@ -508,7 +508,7 @@ export default function CaseDetailPage() {
               <ol className="relative mt-6 space-y-5 border-l border-border pl-6">
                 {timeline.map((entry, index) => (
                   <li key={`${entry.date}-${index}`} className="relative">
-                    <span className="absolute -left-7.75 top-1.5 h-3 w-3 rounded-full border-2 border-white bg-primary shadow" />
+                    <span className="absolute -left-7.75 top-1.5 h-3 w-3 rounded-full border-2 border-background bg-primary shadow" />
                     <p className="text-primary text-xs font-semibold uppercase tracking-[0.12em]">{formatDate(entry.date)}</p>
                     <p className="text-text-primary mt-1 text-sm">{entry.event}</p>
                   </li>
@@ -548,7 +548,7 @@ export default function CaseDetailPage() {
                           href={item.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="mt-1 inline-block text-xs text-orange-700 underline"
+                          className="mt-1 inline-block text-xs text-primary underline"
                         >
                           Open file
                         </a>
@@ -579,11 +579,11 @@ export default function CaseDetailPage() {
                     <Link
                       key={item.case._id}
                       href={`/cases/${item.case._id}`}
-                      className="bg-background block rounded-2xl border border-border p-3 transition hover:border-primary/45 hover:bg-orange-50"
+                      className="bg-background block rounded-2xl border border-border p-3 transition hover:border-primary/45"
                     >
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-text-primary text-sm font-semibold">{item.case.title}</p>
-                        <span className="rounded-full bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-700">
+                        <span className="rounded-full border border-border bg-background px-2.5 py-1 text-xs font-semibold text-primary">
                           {(Number(item.similarity || 0) * 100).toFixed(1)}%
                         </span>
                       </div>
@@ -620,7 +620,7 @@ export default function CaseDetailPage() {
                       <p className="text-primary text-xs font-semibold uppercase tracking-[0.12em]">{entityGroup.type}</p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {entityGroup.values.map((value) => (
-                          <span key={`${entityGroup.type}-${value}`} className="text-text-secondary rounded-full bg-white px-2.5 py-1 text-xs font-medium">
+                          <span key={`${entityGroup.type}-${value}`} className="text-text-secondary rounded-full bg-card border border-border px-2.5 py-1 text-xs font-medium">
                             {value}
                           </span>
                         ))}
@@ -635,7 +635,7 @@ export default function CaseDetailPage() {
       </div>
 
       {isEditOpen && editFormData ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 py-6 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 px-4 py-6 backdrop-blur-sm">
           <div className="cims-card max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-border p-6 shadow-2xl">
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -712,7 +712,7 @@ export default function CaseDetailPage() {
                   <button
                     type="button"
                     onClick={addEditSuspect}
-                    className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white"
+                    className="cims-button-primary px-3 py-1.5 text-xs"
                   >
                     <Plus size={14} />
                     Add
@@ -748,7 +748,7 @@ export default function CaseDetailPage() {
                         <button
                           type="button"
                           onClick={() => removeEditSuspect(index)}
-                          className="mt-2 text-xs font-medium text-red-600 hover:text-red-700"
+                          className="mt-2 text-xs font-medium text-text-secondary hover:text-text-primary"
                         >
                           Remove
                         </button>
@@ -764,7 +764,7 @@ export default function CaseDetailPage() {
                   <button
                     type="button"
                     onClick={addEditTimeline}
-                    className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white"
+                    className="cims-button-primary px-3 py-1.5 text-xs"
                   >
                     <Plus size={14} />
                     Add Event
@@ -794,7 +794,7 @@ export default function CaseDetailPage() {
                         <button
                           type="button"
                           onClick={() => removeEditTimeline(index)}
-                          className="mt-2 text-xs font-medium text-red-600 hover:text-red-700"
+                          className="mt-2 text-xs font-medium text-text-secondary hover:text-text-primary"
                         >
                           Remove
                         </button>
@@ -804,8 +804,8 @@ export default function CaseDetailPage() {
                 </div>
               </section>
 
-              {saveError ? <p className="text-sm font-medium text-rose-700">{saveError}</p> : null}
-              {saveSuccess ? <p className="text-sm font-medium text-emerald-700">{saveSuccess}</p> : null}
+              {saveError ? <p className="text-sm font-medium text-primary">{saveError}</p> : null}
+              {saveSuccess ? <p className="text-sm font-medium text-text-secondary">{saveSuccess}</p> : null}
 
               <div className="flex justify-end gap-2">
                 <button
