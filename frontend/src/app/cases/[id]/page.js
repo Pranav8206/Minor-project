@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Plus, X } from "lucide-react";
 
 import useAuthGuard from "../../../hooks/useAuthGuard";
 import api from "../../../lib/api";
@@ -18,7 +19,77 @@ const priorityTone = {
   Low: "bg-emerald-100 text-emerald-700",
   Medium: "bg-amber-100 text-amber-700",
   High: "bg-rose-100 text-rose-700",
+  Critical: "bg-rose-200 text-rose-800",
 };
+
+const CRIME_TYPES = [
+  "Theft",
+  "Robbery",
+  "Burglary",
+  "Assault",
+  "Homicide",
+  "Fraud",
+  "Cybercrime",
+  "Drug Trafficking",
+  "Human Trafficking",
+  "Other",
+];
+
+const PRIORITY_LEVELS = ["Low", "Medium", "High", "Critical"];
+
+const formatDateInput = (value) => {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return date.toISOString().split("T")[0];
+};
+
+const formatDateTimeLocal = (value) => {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+const normalizeEditableData = (caseItem, timeline) => ({
+  title: caseItem?.title || "",
+  description: caseItem?.description || "",
+  location: caseItem?.location || "",
+  date: formatDateInput(caseItem?.date),
+  crime_type: caseItem?.crime_type || "",
+  priority: caseItem?.priority || "Medium",
+  suspects: Array.isArray(caseItem?.suspects)
+    ? caseItem.suspects.map((suspect) => ({
+        name: suspect?.name || "",
+        relationship: suspect?.relationship || "",
+        notes: suspect?.notes || "",
+      }))
+    : [],
+  timeline: Array.isArray(timeline)
+    ? timeline.map((entry) => ({
+        date: formatDateTimeLocal(entry?.date),
+        event: entry?.event || "",
+      }))
+    : [],
+});
 
 const formatDateTime = (value) => {
   const date = new Date(value);
@@ -50,6 +121,7 @@ const formatDate = (value) => {
 
 export default function CaseDetailPage() {
   const { id } = useParams();
+  const searchParams = useSearchParams();
   const { isChecking, isAuthorized } = useAuthGuard();
 
   const [caseItem, setCaseItem] = useState(null);
@@ -58,52 +130,81 @@ export default function CaseDetailPage() {
   const [recommendations, setRecommendations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const [editFormData, setEditFormData] = useState(null);
+  const [initialEditData, setInitialEditData] = useState(null);
+  const [hasAutoOpenedFromQuery, setHasAutoOpenedFromQuery] = useState(false);
 
-  useEffect(() => {
+  const fetchCaseDetail = useCallback(async () => {
     if (!isAuthorized || !id) {
       return;
     }
 
-    const fetchCaseDetail = async () => {
-      try {
-        setIsLoading(true);
-        setError("");
+    try {
+      setIsLoading(true);
+      setError("");
 
-        const [caseResponse, timelineResponse, recommendationResponse] = await Promise.all([
-          api.get(`/cases/${id}`),
-          api.get(`/cases/${id}/timeline`),
-          api.get(`/cases/${id}/recommendations`),
-        ]);
+      const [caseResponse, timelineResponse, recommendationResponse] = await Promise.all([
+        api.get(`/cases/${id}`),
+        api.get(`/cases/${id}/timeline`),
+        api.get(`/cases/${id}/recommendations`),
+      ]);
 
-        const fetchedCase = caseResponse.data?.case || null;
-        setCaseItem(fetchedCase);
-        setTimeline(timelineResponse.data?.timeline || []);
-        setRecommendations(recommendationResponse.data?.recommendations || []);
+      const fetchedCase = caseResponse.data?.case || null;
+      const fetchedTimeline = timelineResponse.data?.timeline || [];
 
-        if (fetchedCase?.description) {
-          const similarResponse = await api.post("/cases/similar", {
-            query: fetchedCase.description,
-            location: fetchedCase.location,
-            crime_type: fetchedCase.crime_type,
-          });
+      setCaseItem(fetchedCase);
+      setTimeline(fetchedTimeline);
+      setRecommendations(recommendationResponse.data?.recommendations || []);
 
-          const results = (similarResponse.data?.results || [])
-            .filter((item) => item?.case?._id && item.case._id !== fetchedCase._id)
-            .slice(0, 5);
+      if (fetchedCase?.description) {
+        const similarResponse = await api.post("/cases/similar", {
+          query: fetchedCase.description,
+          location: fetchedCase.location,
+          crime_type: fetchedCase.crime_type,
+        });
 
-          setSimilarResults(results);
-        } else {
-          setSimilarResults([]);
-        }
-      } catch (apiError) {
-        setError(apiError.response?.data?.message || "Failed to load case details.");
-      } finally {
-        setIsLoading(false);
+        const results = (similarResponse.data?.results || [])
+          .filter((item) => item?.case?._id && item.case._id !== fetchedCase._id)
+          .slice(0, 5);
+
+        setSimilarResults(results);
+      } else {
+        setSimilarResults([]);
       }
-    };
-
-    fetchCaseDetail();
+    } catch (apiError) {
+      setError(apiError.response?.data?.message || "Failed to load case details.");
+    } finally {
+      setIsLoading(false);
+    }
   }, [id, isAuthorized]);
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    fetchCaseDetail();
+  }, [fetchCaseDetail]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (!caseItem) {
+      return;
+    }
+
+    if (searchParams?.get("edit") === "1" && !hasAutoOpenedFromQuery) {
+      const editableData = normalizeEditableData(caseItem, timeline);
+      setInitialEditData(editableData);
+      setEditFormData(editableData);
+      setSaveError("");
+      setSaveSuccess("");
+      setIsEditOpen(true);
+      setHasAutoOpenedFromQuery(true);
+    }
+  }, [caseItem, timeline, searchParams, hasAutoOpenedFromQuery]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const groupedEntities = useMemo(() => {
     const entities = caseItem?.entities;
@@ -129,6 +230,174 @@ export default function CaseDetailPage() {
       values: [...new Set(values)],
     }));
   }, [caseItem]);
+
+  const openEditModal = () => {
+    const editableData = normalizeEditableData(caseItem, timeline);
+    setInitialEditData(editableData);
+    setEditFormData(editableData);
+    setSaveError("");
+    setSaveSuccess("");
+    setIsEditOpen(true);
+  };
+
+  const closeEditModal = () => {
+    if (isSaving) {
+      return;
+    }
+
+    setIsEditOpen(false);
+  };
+
+  const handleEditChange = (field, value) => {
+    setEditFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const addEditSuspect = () => {
+    setEditFormData((prev) => ({
+      ...prev,
+      suspects: [...(prev?.suspects || []), { name: "", relationship: "", notes: "" }],
+    }));
+  };
+
+  const updateEditSuspect = (index, field, value) => {
+    setEditFormData((prev) => ({
+      ...prev,
+      suspects: (prev?.suspects || []).map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [field]: value } : item
+      ),
+    }));
+  };
+
+  const removeEditSuspect = (index) => {
+    setEditFormData((prev) => ({
+      ...prev,
+      suspects: (prev?.suspects || []).filter((_, itemIndex) => itemIndex !== index),
+    }));
+  };
+
+  const addEditTimeline = () => {
+    setEditFormData((prev) => ({
+      ...prev,
+      timeline: [...(prev?.timeline || []), { date: "", event: "" }],
+    }));
+  };
+
+  const updateEditTimeline = (index, field, value) => {
+    setEditFormData((prev) => ({
+      ...prev,
+      timeline: (prev?.timeline || []).map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [field]: value } : item
+      ),
+    }));
+  };
+
+  const removeEditTimeline = (index) => {
+    setEditFormData((prev) => ({
+      ...prev,
+      timeline: (prev?.timeline || []).filter((_, itemIndex) => itemIndex !== index),
+    }));
+  };
+
+  const buildChangedPayload = () => {
+    if (!editFormData || !initialEditData) {
+      return {};
+    }
+
+    const normalizedCurrent = {
+      ...editFormData,
+      title: editFormData.title.trim(),
+      description: editFormData.description.trim(),
+      location: editFormData.location.trim(),
+      suspects: (editFormData.suspects || [])
+        .map((suspect) => ({
+          name: suspect.name.trim(),
+          relationship: suspect.relationship.trim(),
+          notes: suspect.notes.trim(),
+        }))
+        .filter((suspect) => Boolean(suspect.name)),
+      timeline: (editFormData.timeline || [])
+        .map((entry) => ({
+          date: entry.date,
+          event: entry.event.trim(),
+        }))
+        .filter((entry) => Boolean(entry.date && entry.event)),
+    };
+
+    const normalizedInitial = {
+      ...initialEditData,
+      suspects: (initialEditData.suspects || [])
+        .map((suspect) => ({
+          name: suspect.name.trim(),
+          relationship: suspect.relationship.trim(),
+          notes: suspect.notes.trim(),
+        }))
+        .filter((suspect) => Boolean(suspect.name)),
+      timeline: (initialEditData.timeline || [])
+        .map((entry) => ({
+          date: entry.date,
+          event: entry.event.trim(),
+        }))
+        .filter((entry) => Boolean(entry.date && entry.event)),
+    };
+
+    const payload = {};
+
+    const fieldsToCompare = [
+      "title",
+      "description",
+      "location",
+      "date",
+      "crime_type",
+      "priority",
+      "suspects",
+      "timeline",
+    ];
+
+    fieldsToCompare.forEach((field) => {
+      if (JSON.stringify(normalizedCurrent[field]) !== JSON.stringify(normalizedInitial[field])) {
+        payload[field] = normalizedCurrent[field];
+      }
+    });
+
+    return payload;
+  };
+
+  const handleEditSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!editFormData) {
+      return;
+    }
+
+    if (!editFormData.title.trim() || !editFormData.description.trim() || !editFormData.location.trim() || !editFormData.date || !editFormData.crime_type) {
+      setSaveError("Title, description, location, date, and crime type are required.");
+      return;
+    }
+
+    const changedPayload = buildChangedPayload();
+
+    if (Object.keys(changedPayload).length === 0) {
+      setSaveSuccess("No changes detected.");
+      setSaveError("");
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setSaveError("");
+      setSaveSuccess("");
+      await api.put(`/cases/${id}`, changedPayload);
+      setSaveSuccess("Case updated successfully.");
+      await fetchCaseDetail();
+      setTimeout(() => {
+        setIsEditOpen(false);
+      }, 600);
+    } catch (apiError) {
+      setSaveError(apiError.response?.data?.message || "Failed to update case.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   if (isChecking) {
     return (
@@ -173,12 +442,21 @@ export default function CaseDetailPage() {
             <h1 className="mt-2 text-2xl font-semibold leading-tight sm:text-3xl">{caseItem.title}</h1>
             <p className="mt-2 max-w-3xl text-sm text-orange-50/95">{caseItem.case_summary || caseItem.description}</p>
           </div>
-          <Link
-            href="/cases"
-            className="rounded-xl border border-white/30 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20"
-          >
-            Back to cases
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={openEditModal}
+              className="rounded-xl border border-white/40 bg-white/15 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/25"
+            >
+              Edit
+            </button>
+            <Link
+              href="/cases"
+              className="rounded-xl border border-white/30 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20"
+            >
+              Back to cases
+            </Link>
+          </div>
         </div>
         <div className="mt-5 flex flex-wrap gap-2 text-xs font-semibold">
           <span className="rounded-full bg-white/15 px-3 py-1">ID #{caseItem._id.slice(-6).toUpperCase()}</span>
@@ -265,6 +543,16 @@ export default function CaseDetailPage() {
                     <div key={`${item.type}-${index}`} className="bg-background rounded-2xl border border-border p-3">
                       <p className="text-text-primary text-sm font-semibold">{item.type || "Evidence item"}</p>
                       {item.description ? <p className="text-text-secondary mt-1 text-xs">{item.description}</p> : null}
+                      {item.url ? (
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-1 inline-block text-xs text-orange-700 underline"
+                        >
+                          Open file
+                        </a>
+                      ) : null}
                       {item.reference ? <p className="text-text-secondary mt-1 text-xs">Ref: {item.reference}</p> : null}
                       {item.file_name ? <p className="text-text-secondary mt-1 text-xs">File: {item.file_name}</p> : null}
                     </div>
@@ -345,6 +633,201 @@ export default function CaseDetailPage() {
           </article>
         </section>
       </div>
+
+      {isEditOpen && editFormData ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 py-6 backdrop-blur-sm">
+          <div className="cims-card max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-border p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-text-primary text-xl font-semibold">Edit Case</h2>
+                <p className="text-text-secondary mt-1 text-sm">Update basic details, suspects, timeline, and priority.</p>
+              </div>
+              <button
+                type="button"
+                onClick={closeEditModal}
+                className="rounded-lg border border-border p-2 text-text-secondary transition hover:text-text-primary"
+                aria-label="Close edit modal"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form className="mt-6 space-y-6" onSubmit={handleEditSubmit}>
+              <section className="rounded-xl border border-border bg-background p-4">
+                <h3 className="text-text-primary text-sm font-semibold uppercase tracking-[0.12em]">Basic Info</h3>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <input
+                    value={editFormData.title}
+                    onChange={(event) => handleEditChange("title", event.target.value)}
+                    className="cims-input px-4 py-2 text-sm sm:col-span-2"
+                    placeholder="Case title"
+                  />
+                  <select
+                    value={editFormData.crime_type}
+                    onChange={(event) => handleEditChange("crime_type", event.target.value)}
+                    className="cims-input px-4 py-2 text-sm"
+                  >
+                    <option value="">Select crime type</option>
+                    {CRIME_TYPES.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={editFormData.priority}
+                    onChange={(event) => handleEditChange("priority", event.target.value)}
+                    className="cims-input px-4 py-2 text-sm"
+                  >
+                    {PRIORITY_LEVELS.map((priority) => (
+                      <option key={priority} value={priority}>
+                        {priority}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="date"
+                    value={editFormData.date}
+                    onChange={(event) => handleEditChange("date", event.target.value)}
+                    className="cims-input px-4 py-2 text-sm"
+                  />
+                  <input
+                    value={editFormData.location}
+                    onChange={(event) => handleEditChange("location", event.target.value)}
+                    className="cims-input px-4 py-2 text-sm sm:col-span-2"
+                    placeholder="Location"
+                  />
+                  <textarea
+                    value={editFormData.description}
+                    onChange={(event) => handleEditChange("description", event.target.value)}
+                    className="cims-input min-h-28 px-4 py-2 text-sm sm:col-span-2"
+                    placeholder="Description"
+                  />
+                </div>
+              </section>
+
+              <section className="rounded-xl border border-border bg-background p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-text-primary text-sm font-semibold uppercase tracking-[0.12em]">Suspects</h3>
+                  <button
+                    type="button"
+                    onClick={addEditSuspect}
+                    className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white"
+                  >
+                    <Plus size={14} />
+                    Add
+                  </button>
+                </div>
+
+                <div className="mt-3 space-y-3">
+                  {(editFormData.suspects || []).length === 0 ? (
+                    <p className="text-text-secondary text-sm">No suspects added.</p>
+                  ) : (
+                    editFormData.suspects.map((suspect, index) => (
+                      <div key={`edit-suspect-${index}`} className="rounded-lg border border-border bg-card p-3">
+                        <div className="grid gap-2 sm:grid-cols-3">
+                          <input
+                            value={suspect.name}
+                            onChange={(event) => updateEditSuspect(index, "name", event.target.value)}
+                            className="cims-input px-3 py-2 text-sm"
+                            placeholder="Name"
+                          />
+                          <input
+                            value={suspect.relationship}
+                            onChange={(event) => updateEditSuspect(index, "relationship", event.target.value)}
+                            className="cims-input px-3 py-2 text-sm"
+                            placeholder="Relationship"
+                          />
+                          <input
+                            value={suspect.notes}
+                            onChange={(event) => updateEditSuspect(index, "notes", event.target.value)}
+                            className="cims-input px-3 py-2 text-sm"
+                            placeholder="Notes"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeEditSuspect(index)}
+                          className="mt-2 text-xs font-medium text-red-600 hover:text-red-700"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </section>
+
+              <section className="rounded-xl border border-border bg-background p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-text-primary text-sm font-semibold uppercase tracking-[0.12em]">Timeline</h3>
+                  <button
+                    type="button"
+                    onClick={addEditTimeline}
+                    className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white"
+                  >
+                    <Plus size={14} />
+                    Add Event
+                  </button>
+                </div>
+
+                <div className="mt-3 space-y-3">
+                  {(editFormData.timeline || []).length === 0 ? (
+                    <p className="text-text-secondary text-sm">No timeline events.</p>
+                  ) : (
+                    editFormData.timeline.map((entry, index) => (
+                      <div key={`edit-timeline-${index}`} className="rounded-lg border border-border bg-card p-3">
+                        <div className="grid gap-2 sm:grid-cols-[1fr,2fr]">
+                          <input
+                            type="datetime-local"
+                            value={entry.date}
+                            onChange={(event) => updateEditTimeline(index, "date", event.target.value)}
+                            className="cims-input px-3 py-2 text-sm"
+                          />
+                          <input
+                            value={entry.event}
+                            onChange={(event) => updateEditTimeline(index, "event", event.target.value)}
+                            className="cims-input px-3 py-2 text-sm"
+                            placeholder="Event"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeEditTimeline(index)}
+                          className="mt-2 text-xs font-medium text-red-600 hover:text-red-700"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </section>
+
+              {saveError ? <p className="text-sm font-medium text-rose-700">{saveError}</p> : null}
+              {saveSuccess ? <p className="text-sm font-medium text-emerald-700">{saveSuccess}</p> : null}
+
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={closeEditModal}
+                  className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-secondary transition hover:text-text-primary"
+                  disabled={isSaving}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="cims-button-primary px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {isSaving ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

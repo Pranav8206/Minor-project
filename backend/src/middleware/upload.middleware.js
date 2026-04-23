@@ -13,8 +13,6 @@ if (!fs.existsSync(evidenceUploadsDir)) {
 const allowedMimeTypes = new Set([
   "image/jpeg",
   "image/png",
-  "image/gif",
-  "image/webp",
   "application/pdf",
 ]);
 

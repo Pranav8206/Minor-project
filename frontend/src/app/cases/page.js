@@ -63,6 +63,7 @@ export default function CasesPage() {
                 <th className="pb-3 font-medium">Crime Type</th>
                 <th className="pb-3 font-medium">Status</th>
                 <th className="pb-3 font-medium">Date</th>
+                <th className="pb-3 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -78,6 +79,14 @@ export default function CasesPage() {
                   <td className="text-text-secondary py-3">{item.crime_type}</td>
                   <td className="text-text-secondary py-3 capitalize">{item.status}</td>
                   <td className="text-text-secondary py-3">{new Date(item.date).toLocaleDateString()}</td>
+                  <td className="py-3">
+                    <Link
+                      href={`/cases/${item._id}?edit=1`}
+                      className="inline-flex rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-text-secondary transition hover:border-primary/40 hover:text-text-primary"
+                    >
+                      Edit
+                    </Link>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -98,6 +107,14 @@ export default function CasesPage() {
                 <span className="bg-background rounded-full px-2 py-1">{item.location}</span>
                 <span className="bg-background rounded-full px-2 py-1">{item.crime_type}</span>
                 <span className="bg-background rounded-full px-2 py-1 capitalize">{item.status}</span>
+              </div>
+              <div className="mt-3">
+                <Link
+                  href={`/cases/${item._id}?edit=1`}
+                  className="inline-flex rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-text-secondary transition hover:border-primary/40 hover:text-text-primary"
+                >
+                  Edit
+                </Link>
               </div>
             </article>
           ))}

@@ -25,36 +25,15 @@ const suspectSchema = new mongoose.Schema(
 
 const evidenceSchema = new mongoose.Schema(
   {
-    type: {
+    url: {
       type: String,
       required: true,
       trim: true,
     },
-    description: {
+    type: {
       type: String,
+      required: true,
       trim: true,
-    },
-    reference: {
-      type: String,
-      trim: true,
-    },
-    file_name: {
-      type: String,
-      trim: true,
-    },
-    file_url: {
-      type: String,
-      trim: true,
-    },
-    mime_type: {
-      type: String,
-      trim: true,
-    },
-    file_size: {
-      type: Number,
-    },
-    collected_at: {
-      type: Date,
     },
   },
   { _id: false }
@@ -135,7 +114,7 @@ const caseSchema = new mongoose.Schema(
     },
     priority: {
       type: String,
-      enum: ["Low", "Medium", "High"],
+      enum: ["Low", "Medium", "High", "Critical"],
       default: "Medium",
     },
     tags: {

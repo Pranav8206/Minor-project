@@ -1,10 +1,12 @@
 import mongoose from "mongoose";
+import fs from "node:fs/promises";
 
 import Case from "../models/case.model.js";
 import Suspect from "../models/suspect.model.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { analyzeCaseDescription, searchSimilarCases } from "../utils/pythonAiClient.js";
 import calculateRiskScore from "../utils/riskScore.js";
+import { uploadEvidenceFileToCloudinary } from "../utils/cloudinary.js";
 
 const sanitizePayload = (payload) =>
   Object.fromEntries(
@@ -29,6 +31,51 @@ const normalizeEmbedding = (value) => {
   return value
     .map((item) => Number(item))
     .filter((item) => Number.isFinite(item));
+};
+
+const parseJsonArrayField = (value, fallback = []) => {
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return fallback;
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed);
+    return Array.isArray(parsed) ? parsed : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const normalizeEvidence = (value) => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object") {
+        return null;
+      }
+
+      const url = typeof item.url === "string" ? item.url.trim() : "";
+      const type = typeof item.type === "string" ? item.type.trim().toLowerCase() : "";
+
+      if (!url || !["image", "pdf"].includes(type)) {
+        return null;
+      }
+
+      return { url, type };
+    })
+    .filter(Boolean);
 };
 
 const normalizeCaseEntities = (value) => {
@@ -219,9 +266,85 @@ const normalizeCoordinate = (value) => {
   return Number.isFinite(parsed) ? parsed : undefined;
 };
 
+const isDateLikeEqual = (left, right) => {
+  const leftDate = new Date(left);
+  const rightDate = new Date(right);
+
+  if (Number.isNaN(leftDate.getTime()) || Number.isNaN(rightDate.getTime())) {
+    return false;
+  }
+
+  return leftDate.getTime() === rightDate.getTime();
+};
+
+const areValuesEqual = (left, right) => {
+  if (left === right) {
+    return true;
+  }
+
+  if (left === undefined || right === undefined) {
+    return false;
+  }
+
+  if (left === null || right === null) {
+    return left === right;
+  }
+
+  const leftType = typeof left;
+  const rightType = typeof right;
+
+  if (leftType !== rightType) {
+    return false;
+  }
+
+  if (
+    (leftType === "string" || left instanceof Date || right instanceof Date) &&
+    isDateLikeEqual(left, right)
+  ) {
+    return true;
+  }
+
+  if (leftType === "object") {
+    return JSON.stringify(left) === JSON.stringify(right);
+  }
+
+  return false;
+};
+
+const uploadIncomingEvidenceFiles = async (files = []) => {
+  if (!Array.isArray(files) || files.length === 0) {
+    return [];
+  }
+
+  const uploaded = [];
+
+  try {
+    for (const file of files) {
+      const uploadedFile = await uploadEvidenceFileToCloudinary(file.path, file.mimetype);
+      uploaded.push(uploadedFile);
+    }
+
+    return uploaded;
+  } finally {
+    await Promise.all(
+      files.map((file) => fs.unlink(file.path).catch(() => undefined))
+    );
+  }
+};
+
 const parseCasePayload = (body, { partial = false } = {}) => {
   const latitude = normalizeCoordinate(body.latitude);
   const longitude = normalizeCoordinate(body.longitude);
+  const suspectsInput =
+    body.suspects === undefined ? undefined : parseJsonArrayField(body.suspects, []);
+  const evidenceInput =
+    body.evidence === undefined ? undefined : parseJsonArrayField(body.evidence, []);
+  const embeddingInput =
+    body.embedding === undefined ? undefined : parseJsonArrayField(body.embedding, []);
+  const entitiesInput =
+    body.entities === undefined ? undefined : parseJsonArrayField(body.entities, []);
+  const timelineInput =
+    body.timeline === undefined ? undefined : parseJsonArrayField(body.timeline, []);
 
   const payload = {
     title: body.title,
@@ -238,11 +361,12 @@ const parseCasePayload = (body, { partial = false } = {}) => {
     tags: normalizeTags(body.tags),
     status: body.status,
     assigned_officer: body.assigned_officer === "" ? null : body.assigned_officer,
-    suspects: normalizeSuspects(body.suspects),
-    evidence: body.evidence,
-    embedding: body.embedding,
-    entities: body.entities,
-    timeline: normalizeTimeline(body.timeline),
+    suspects: suspectsInput === undefined ? undefined : normalizeSuspects(suspectsInput),
+    evidence: evidenceInput === undefined ? undefined : normalizeEvidence(evidenceInput),
+    embedding:
+      embeddingInput === undefined ? undefined : normalizeEmbedding(embeddingInput),
+    entities: entitiesInput === undefined ? undefined : normalizeCaseEntities(entitiesInput),
+    timeline: timelineInput === undefined ? undefined : normalizeTimeline(timelineInput),
   };
 
   return partial ? sanitizePayload(payload) : payload;
@@ -361,6 +485,12 @@ const generateCaseSummary = ({
 
 export const createCase = asyncHandler(async (req, res) => {
   const caseData = parseCasePayload(req.body);
+  const uploadedEvidence = await uploadIncomingEvidenceFiles(req.files);
+
+  if (uploadedEvidence.length > 0) {
+    caseData.evidence = [...(Array.isArray(caseData.evidence) ? caseData.evidence : []), ...uploadedEvidence];
+  }
+
   const normalizedDescription =
     typeof caseData.description === "string" ? caseData.description.trim() : "";
 
@@ -695,7 +825,21 @@ export const updateCase = asyncHandler(async (req, res) => {
     updateData.case_summary = generateCaseSummary(mergedForSummary);
   }
 
-  const updatedCase = await Case.findByIdAndUpdate(id, updateData, {
+  const changedData = Object.fromEntries(
+    Object.entries(updateData).filter(([key, value]) => {
+      const currentValue = existingCase.get(key);
+      return !areValuesEqual(currentValue, value);
+    })
+  );
+
+  if (Object.keys(changedData).length === 0) {
+    return res.status(200).json({
+      message: "No changes detected",
+      case: existingCase,
+    });
+  }
+
+  const updatedCase = await Case.findByIdAndUpdate(id, changedData, {
     new: true,
     runValidators: true,
   });

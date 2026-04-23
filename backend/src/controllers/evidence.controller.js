@@ -1,10 +1,12 @@
 import mongoose from "mongoose";
+import fs from "node:fs/promises";
 
 import Case from "../models/case.model.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import { uploadEvidenceFileToCloudinary } from "../utils/cloudinary.js";
 
 export const uploadEvidence = asyncHandler(async (req, res) => {
-  const { caseId, description, reference } = req.body;
+  const { caseId } = req.body;
 
   if (!caseId) {
     return res.status(400).json({
@@ -24,17 +26,13 @@ export const uploadEvidence = asyncHandler(async (req, res) => {
     });
   }
 
-  const fileUrl = `${req.protocol}://${req.get("host")}/uploads/evidence/${req.file.filename}`;
-  const evidenceItem = {
-    type: req.file.mimetype === "application/pdf" ? "pdf" : "image",
-    description: description || req.file.originalname,
-    reference: reference || fileUrl,
-    file_name: req.file.filename,
-    file_url: fileUrl,
-    mime_type: req.file.mimetype,
-    file_size: req.file.size,
-    collected_at: new Date(),
-  };
+  let evidenceItem;
+
+  try {
+    evidenceItem = await uploadEvidenceFileToCloudinary(req.file.path, req.file.mimetype);
+  } finally {
+    await fs.unlink(req.file.path).catch(() => undefined);
+  }
 
   const updatedCase = await Case.findByIdAndUpdate(
     caseId,
@@ -57,7 +55,7 @@ export const uploadEvidence = asyncHandler(async (req, res) => {
 
   return res.status(201).json({
     message: "Evidence uploaded successfully",
-    fileUrl,
+    fileUrl: evidenceItem.url,
     evidence: evidenceItem,
     case: updatedCase,
   });

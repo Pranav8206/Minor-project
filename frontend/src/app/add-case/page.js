@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Image from "next/image";
 import { Plus, X } from "lucide-react";
 import useAuthGuard from "../../hooks/useAuthGuard";
 import api from "../../lib/api";
@@ -44,9 +45,20 @@ const initialForm = {
 export default function AddCasePage() {
   const { isChecking, isAuthorized } = useAuthGuard();
   const [formData, setFormData] = useState(initialForm);
+  const [evidenceFiles, setEvidenceFiles] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    return () => {
+      evidenceFiles.forEach((item) => {
+        if (item.previewUrl) {
+          URL.revokeObjectURL(item.previewUrl);
+        }
+      });
+    };
+  }, [evidenceFiles]);
 
   // Basic Info handlers
   const handleBasicChange = (field, value) => {
@@ -97,6 +109,45 @@ export default function AddCasePage() {
     }));
   };
 
+  const handleEvidenceSelect = (event) => {
+    const selectedFiles = Array.from(event.target.files || []);
+    if (selectedFiles.length === 0) {
+      return;
+    }
+
+    const allowedMimeTypes = new Set(["image/jpeg", "image/png", "application/pdf"]);
+    const hasInvalidFile = selectedFiles.some((file) => !allowedMimeTypes.has(file.type));
+
+    if (hasInvalidFile) {
+      setError("Only JPG, PNG, and PDF files are allowed.");
+      event.target.value = "";
+      return;
+    }
+
+    const nextFiles = selectedFiles.map((file) => ({
+      file,
+      type: file.type === "application/pdf" ? "pdf" : "image",
+      previewUrl: file.type === "application/pdf" ? "" : URL.createObjectURL(file),
+    }));
+
+    setError("");
+    setEvidenceFiles((prev) => [...prev, ...nextFiles]);
+    event.target.value = "";
+  };
+
+  const removeEvidenceFile = (index) => {
+    setEvidenceFiles((prev) => {
+      const next = [...prev];
+      const removed = next.splice(index, 1)[0];
+
+      if (removed?.previewUrl) {
+        URL.revokeObjectURL(removed.previewUrl);
+      }
+
+      return next;
+    });
+  };
+
   const validateForm = () => {
     if (!formData.title.trim()) return "Case title is required.";
     if (!formData.description.trim()) return "Case description is required.";
@@ -118,26 +169,60 @@ export default function AddCasePage() {
       return;
     }
 
-    // Convert form data to payload with JSON arrays
-    const payload = {
-      title: formData.title.trim(),
-      description: formData.description.trim(),
-      location: formData.location.trim(),
-      latitude: formData.latitude ? parseFloat(formData.latitude) : null,
-      longitude: formData.longitude ? parseFloat(formData.longitude) : null,
-      date: formData.date,
-      crime_type: formData.crime_type,
-      status: "open",
-      suspects: formData.suspects,
-      evidence: formData.evidence,
-      entities: [], // Can be populated by AI later
-      embedding: [], // Can be populated by AI later
-    };
+    const normalizedSuspects = formData.suspects
+      .map((suspect) => ({
+        name: suspect.name?.trim() || "",
+        relationship: suspect.relationship?.trim() || "",
+        notes: suspect.notes?.trim() || "",
+      }))
+      .filter((suspect) => Boolean(suspect.name));
+
+    const normalizedTimeline = formData.timeline
+      .map((step) => ({
+        date: step.date,
+        event: step.event?.trim() || "",
+      }))
+      .filter((step) => Boolean(step.date && step.event));
+
+    const payload = new FormData();
+    payload.append("title", formData.title.trim());
+    payload.append("description", formData.description.trim());
+    payload.append("location", formData.location.trim());
+    payload.append("date", formData.date);
+    payload.append("crime_type", formData.crime_type);
+    payload.append("priority", formData.priority);
+    payload.append("status", "open");
+    payload.append("suspects", JSON.stringify(normalizedSuspects));
+    payload.append("timeline", JSON.stringify(normalizedTimeline));
+    payload.append("entities", JSON.stringify([]));
+    payload.append("embedding", JSON.stringify([]));
+
+    if (formData.latitude !== "") {
+      payload.append("latitude", formData.latitude);
+    }
+
+    if (formData.longitude !== "") {
+      payload.append("longitude", formData.longitude);
+    }
+
+    evidenceFiles.forEach((item) => {
+      payload.append("evidenceFiles", item.file);
+    });
 
     try {
       setIsSubmitting(true);
-      await api.post("/cases", payload);
+      await api.post("/cases", payload, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
       setMessage("Case created successfully.");
+      evidenceFiles.forEach((item) => {
+        if (item.previewUrl) {
+          URL.revokeObjectURL(item.previewUrl);
+        }
+      });
+      setEvidenceFiles([]);
       setFormData(initialForm);
     } catch (apiError) {
       setError(apiError.response?.data?.message || "Failed to create case.");
@@ -325,9 +410,53 @@ export default function AddCasePage() {
             <h3 className="text-text-primary text-lg font-semibold">Evidence</h3>
             <p className="text-text-secondary mt-1 text-sm">Upload and document evidence items</p>
 
-            <div className="mt-6 rounded-lg border-2 border-dashed border-border bg-background p-8 text-center">
-              <p className="text-text-secondary text-sm">Evidence upload functionality will be available in the next update.</p>
-              <p className="text-text-secondary mt-2 text-xs">Files can be attached through the case detail page after creation.</p>
+            <div className="mt-6 rounded-lg border-2 border-dashed border-border bg-background p-6">
+              <label className="block cursor-pointer rounded-lg border border-border bg-card px-4 py-3 text-center text-sm text-text-secondary hover:border-primary/50 hover:text-text-primary transition">
+                Select JPG, PNG, or PDF files
+                <input
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.pdf"
+                  multiple
+                  className="hidden"
+                  onChange={handleEvidenceSelect}
+                />
+              </label>
+
+              {evidenceFiles.length > 0 ? (
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {evidenceFiles.map((item, index) => (
+                    <div key={`${item.file.name}-${index}`} className="rounded-lg border border-border bg-card p-3">
+                      {item.type === "image" ? (
+                        <Image
+                          src={item.previewUrl}
+                          alt={item.file.name}
+                          width={320}
+                          height={112}
+                          className="h-28 w-full rounded-md object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-28 items-center justify-center rounded-md bg-background text-sm font-medium text-text-secondary">
+                          PDF Document
+                        </div>
+                      )}
+                      <p className="text-text-primary mt-2 truncate text-xs font-medium">{item.file.name}</p>
+                      <p className="text-text-secondary mt-1 text-xs">{Math.round(item.file.size / 1024)} KB</p>
+                      <button
+                        type="button"
+                        onClick={() => removeEvidenceFile(index)}
+                        className="mt-2 inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700"
+                      >
+                        <X size={14} />
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-text-secondary mt-4 text-center text-xs">
+                  No files selected yet. Uploaded files will be previewed here.
+                </p>
+              )}
             </div>
           </section>
 
@@ -408,7 +537,7 @@ export default function AddCasePage() {
                 <strong>Timeline</strong><br />Document events in chronological order
               </li>
               <li>
-                <strong>Evidence</strong><br />Will be available after case creation
+                <strong>Evidence</strong><br />Attach JPG, PNG, or PDF files
               </li>
             </ul>
           </article>
