@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useParams, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, X } from "lucide-react";
@@ -81,12 +82,14 @@ const normalizeEditableData = (caseItem, timeline) => ({
         name: suspect?.name || "",
         relationship: suspect?.relationship || "",
         notes: suspect?.notes || "",
+        image_url: suspect?.image_url || "",
       }))
     : [],
   timeline: Array.isArray(timeline)
     ? timeline.map((entry) => ({
         date: formatDateTimeLocal(entry?.date),
         event: entry?.event || "",
+        image_url: entry?.image_url || "",
       }))
     : [],
 });
@@ -141,10 +144,14 @@ export default function CaseDetailPage() {
     name: "",
     relationship: "",
     notes: "",
+    imageFile: null,
+    imagePreviewUrl: "",
   });
   const [quickTimeline, setQuickTimeline] = useState({
     date: "",
     event: "",
+    imageFile: null,
+    imagePreviewUrl: "",
   });
   const [quickActionError, setQuickActionError] = useState("");
   const [quickActionSuccess, setQuickActionSuccess] = useState("");
@@ -199,6 +206,18 @@ export default function CaseDetailPage() {
     fetchCaseDetail();
   }, [fetchCaseDetail]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  useEffect(() => {
+    return () => {
+      if (quickSuspect.imagePreviewUrl) {
+        URL.revokeObjectURL(quickSuspect.imagePreviewUrl);
+      }
+
+      if (quickTimeline.imagePreviewUrl) {
+        URL.revokeObjectURL(quickTimeline.imagePreviewUrl);
+      }
+    };
+  }, [quickSuspect.imagePreviewUrl, quickTimeline.imagePreviewUrl]);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -325,12 +344,14 @@ export default function CaseDetailPage() {
           name: suspect.name.trim(),
           relationship: suspect.relationship.trim(),
           notes: suspect.notes.trim(),
+          image_url: suspect.image_url || "",
         }))
         .filter((suspect) => Boolean(suspect.name)),
       timeline: (editFormData.timeline || [])
         .map((entry) => ({
           date: entry.date,
           event: entry.event.trim(),
+          image_url: entry.image_url || "",
         }))
         .filter((entry) => Boolean(entry.date && entry.event)),
     };
@@ -342,12 +363,14 @@ export default function CaseDetailPage() {
           name: suspect.name.trim(),
           relationship: suspect.relationship.trim(),
           notes: suspect.notes.trim(),
+          image_url: suspect.image_url || "",
         }))
         .filter((suspect) => Boolean(suspect.name)),
       timeline: (initialEditData.timeline || [])
         .map((entry) => ({
           date: entry.date,
           event: entry.event.trim(),
+          image_url: entry.image_url || "",
         }))
         .filter((entry) => Boolean(entry.date && entry.event)),
     };
@@ -426,17 +449,34 @@ export default function CaseDetailPage() {
       setQuickActionError("");
       setQuickActionSuccess("");
 
-      await api.post(`/cases/${id}/suspects`, {
-        suspects: [
+      const payload = new FormData();
+      payload.append(
+        "suspects",
+        JSON.stringify([
           {
             name,
             relationship: quickSuspect.relationship.trim(),
             notes: quickSuspect.notes.trim(),
+            ...(quickSuspect.imageFile ? { image_file_index: 0 } : {}),
           },
-        ],
+        ])
+      );
+
+      if (quickSuspect.imageFile) {
+        payload.append("suspectImageFile", quickSuspect.imageFile);
+      }
+
+      await api.post(`/cases/${id}/suspects`, payload, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       });
 
-      setQuickSuspect({ name: "", relationship: "", notes: "" });
+      if (quickSuspect.imagePreviewUrl) {
+        URL.revokeObjectURL(quickSuspect.imagePreviewUrl);
+      }
+
+      setQuickSuspect({ name: "", relationship: "", notes: "", imageFile: null, imagePreviewUrl: "" });
       setQuickActionSuccess("Suspect linked successfully.");
       await fetchCaseDetail();
     } catch (apiError) {
@@ -460,18 +500,83 @@ export default function CaseDetailPage() {
       setQuickActionError("");
       setQuickActionSuccess("");
 
-      await api.post(`/cases/${id}/timeline`, {
-        timeline: [
+      const payload = new FormData();
+      payload.append(
+        "timeline",
+        JSON.stringify([
           {
             date: quickTimeline.date,
             event: quickTimeline.event.trim(),
+            ...(quickTimeline.imageFile ? { image_file_index: 0 } : {}),
           },
-        ],
+        ])
+      );
+
+      if (quickTimeline.imageFile) {
+        payload.append("timelineImageFile", quickTimeline.imageFile);
+      }
+
+      await api.post(`/cases/${id}/timeline`, payload, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       });
 
-      setQuickTimeline({ date: "", event: "" });
+      if (quickTimeline.imagePreviewUrl) {
+        URL.revokeObjectURL(quickTimeline.imagePreviewUrl);
+      }
+
+      setQuickTimeline({ date: "", event: "", imageFile: null, imagePreviewUrl: "" });
       setQuickActionSuccess("Timeline event added successfully.");
       await fetchCaseDetail();
+      const handleQuickSuspectImageChange = (file) => {
+        if (!file) {
+          return;
+        }
+
+        if (!file.type.startsWith("image/")) {
+          setQuickActionError("Only image files are allowed for suspect photos.");
+          return;
+        }
+
+        setQuickActionError("");
+        setQuickSuspect((prev) => {
+          if (prev.imagePreviewUrl) {
+            URL.revokeObjectURL(prev.imagePreviewUrl);
+          }
+
+          return {
+            ...prev,
+            imageFile: file,
+            imagePreviewUrl: URL.createObjectURL(file),
+          };
+        });
+      };
+
+      const handleQuickTimelineImageChange = (file) => {
+        if (!file) {
+          return;
+        }
+
+        if (!file.type.startsWith("image/")) {
+          setQuickActionError("Only image files are allowed for timeline photos.");
+          return;
+        }
+
+        setQuickActionError("");
+        setQuickTimeline((prev) => {
+          if (prev.imagePreviewUrl) {
+            URL.revokeObjectURL(prev.imagePreviewUrl);
+          }
+
+          return {
+            ...prev,
+            imageFile: file,
+            imagePreviewUrl: URL.createObjectURL(file),
+          };
+        });
+      };
+
     } catch (apiError) {
       setQuickActionError(apiError.response?.data?.message || "Failed to add timeline event.");
       setQuickActionSuccess("");
@@ -592,6 +697,17 @@ export default function CaseDetailPage() {
                     <span className="absolute -left-7.75 top-1.5 h-3 w-3 rounded-full border-2 border-background bg-primary shadow" />
                     <p className="text-primary text-xs font-semibold uppercase tracking-[0.12em]">{formatDate(entry.date)}</p>
                     <p className="text-text-primary mt-1 text-sm">{entry.event}</p>
+                    {entry.image_url ? (
+                      <a href={entry.image_url} target="_blank" rel="noreferrer" className="mt-2 inline-block">
+                        <Image
+                          src={entry.image_url}
+                          alt={`Timeline evidence ${index + 1}`}
+                          width={220}
+                          height={130}
+                          className="h-28 w-44 rounded-lg border border-border object-cover"
+                        />
+                      </a>
+                    ) : null}
                   </li>
                 ))}
               </ol>
@@ -624,6 +740,35 @@ export default function CaseDetailPage() {
                   Add Event
                 </button>
               </div>
+              <div className="mt-3 grid gap-3 sm:grid-cols-[auto,1fr] sm:items-center">
+                <label className="cims-button-muted cursor-pointer px-3 py-2 text-xs">
+                  Upload timeline image
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(event) => {
+                      const selectedFile = event.target.files?.[0];
+                      if (selectedFile) {
+                        handleQuickTimelineImageChange(selectedFile);
+                      }
+                      event.target.value = "";
+                    }}
+                  />
+                </label>
+
+                {quickTimeline.imagePreviewUrl ? (
+                  <Image
+                    src={quickTimeline.imagePreviewUrl}
+                    alt="Timeline preview"
+                    width={180}
+                    height={108}
+                    className="h-24 w-40 rounded-md border border-border object-cover"
+                  />
+                ) : (
+                  <p className="text-text-secondary text-xs">No timeline image selected</p>
+                )}
+              </div>
             </form>
           </article>
 
@@ -637,6 +782,17 @@ export default function CaseDetailPage() {
                       <p className="text-text-primary text-sm font-semibold">{suspect.name}</p>
                       {suspect.relationship ? <p className="text-text-secondary mt-1 text-xs">Role: {suspect.relationship}</p> : null}
                       {suspect.notes ? <p className="text-text-secondary mt-1 text-xs">Notes: {suspect.notes}</p> : null}
+                      {suspect.image_url ? (
+                        <a href={suspect.image_url} target="_blank" rel="noreferrer" className="mt-2 inline-block">
+                          <Image
+                            src={suspect.image_url}
+                            alt={`${suspect.name} photo`}
+                            width={160}
+                            height={96}
+                            className="h-24 w-36 rounded-md border border-border object-cover"
+                          />
+                        </a>
+                      ) : null}
                     </div>
                   ))}
                 </div>
@@ -674,6 +830,35 @@ export default function CaseDetailPage() {
                     className="cims-input px-3 py-2 text-sm"
                     placeholder="Notes"
                   />
+                </div>
+                <div className="mt-3 grid gap-3 sm:grid-cols-[auto,1fr] sm:items-center">
+                  <label className="cims-button-muted cursor-pointer px-3 py-2 text-xs">
+                    Upload suspect image
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(event) => {
+                        const selectedFile = event.target.files?.[0];
+                        if (selectedFile) {
+                          handleQuickSuspectImageChange(selectedFile);
+                        }
+                        event.target.value = "";
+                      }}
+                    />
+                  </label>
+
+                  {quickSuspect.imagePreviewUrl ? (
+                    <Image
+                      src={quickSuspect.imagePreviewUrl}
+                      alt="Suspect preview"
+                      width={180}
+                      height={108}
+                      className="h-24 w-40 rounded-md border border-border object-cover"
+                    />
+                  ) : (
+                    <p className="text-text-secondary text-xs">No suspect image selected</p>
+                  )}
                 </div>
                 <button
                   type="submit"

@@ -15,7 +15,11 @@ const errorHandler = (error, req, res, next) => {
     statusCode = 400;
   }
 
-  if (error.name === "MulterError" || error.message === "Only image and PDF files are allowed") {
+  if (
+    error.name === "MulterError" ||
+    error.message === "Only image and PDF files are allowed" ||
+    error.message === "Only image files are allowed for suspect and timeline uploads"
+  ) {
     statusCode = 400;
   }
 

@@ -37,6 +37,7 @@ export const getSuspectById = asyncHandler(async (req, res) => {
     suspect: {
       _id: suspect._id,
       name: suspect.name,
+      image_url: suspect.image_url,
       risk_score: riskScore,
       linked_cases_count: linkedCases.length,
       linked_cases: linkedCases,

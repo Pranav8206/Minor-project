@@ -18,6 +18,10 @@ const suspectSchema = new mongoose.Schema(
       ref: "Case",
       default: [],
     },
+    image_url: {
+      type: String,
+      trim: true,
+    },
     risk_score: {
       type: Number,
       default: 0,

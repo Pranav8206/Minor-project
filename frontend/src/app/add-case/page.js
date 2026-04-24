@@ -57,8 +57,20 @@ export default function AddCasePage() {
           URL.revokeObjectURL(item.previewUrl);
         }
       });
+
+      formData.suspects.forEach((suspect) => {
+        if (suspect.imagePreviewUrl) {
+          URL.revokeObjectURL(suspect.imagePreviewUrl);
+        }
+      });
+
+      formData.timeline.forEach((event) => {
+        if (event.imagePreviewUrl) {
+          URL.revokeObjectURL(event.imagePreviewUrl);
+        }
+      });
     };
-  }, [evidenceFiles]);
+  }, [evidenceFiles, formData.suspects, formData.timeline]);
 
   // Basic Info handlers
   const handleBasicChange = (field, value) => {
@@ -69,7 +81,7 @@ export default function AddCasePage() {
   const addSuspect = () => {
     setFormData((prev) => ({
       ...prev,
-      suspects: [...prev.suspects, { name: "", relationship: "", status: "pending" }],
+      suspects: [...prev.suspects, { name: "", relationship: "", status: "pending", imageFile: null, imagePreviewUrl: "" }],
     }));
   };
 
@@ -83,7 +95,44 @@ export default function AddCasePage() {
   const removeSuspect = (index) => {
     setFormData((prev) => ({
       ...prev,
-      suspects: prev.suspects.filter((_, i) => i !== index),
+      suspects: prev.suspects.filter((suspect, i) => {
+        if (i === index && suspect.imagePreviewUrl) {
+          URL.revokeObjectURL(suspect.imagePreviewUrl);
+        }
+
+        return i !== index;
+      }),
+    }));
+  };
+
+  const handleSuspectImageChange = (index, file) => {
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setError("Only image files are allowed for suspect photos.");
+      return;
+    }
+
+    setError("");
+    setFormData((prev) => ({
+      ...prev,
+      suspects: prev.suspects.map((suspect, i) => {
+        if (i !== index) {
+          return suspect;
+        }
+
+        if (suspect.imagePreviewUrl) {
+          URL.revokeObjectURL(suspect.imagePreviewUrl);
+        }
+
+        return {
+          ...suspect,
+          imageFile: file,
+          imagePreviewUrl: URL.createObjectURL(file),
+        };
+      }),
     }));
   };
 
@@ -91,7 +140,7 @@ export default function AddCasePage() {
   const addTimelineStep = () => {
     setFormData((prev) => ({
       ...prev,
-      timeline: [...prev.timeline, { date: "", event: "" }],
+      timeline: [...prev.timeline, { date: "", event: "", imageFile: null, imagePreviewUrl: "" }],
     }));
   };
 
@@ -105,7 +154,44 @@ export default function AddCasePage() {
   const removeTimelineStep = (index) => {
     setFormData((prev) => ({
       ...prev,
-      timeline: prev.timeline.filter((_, i) => i !== index),
+      timeline: prev.timeline.filter((entry, i) => {
+        if (i === index && entry.imagePreviewUrl) {
+          URL.revokeObjectURL(entry.imagePreviewUrl);
+        }
+
+        return i !== index;
+      }),
+    }));
+  };
+
+  const handleTimelineImageChange = (index, file) => {
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setError("Only image files are allowed for timeline photos.");
+      return;
+    }
+
+    setError("");
+    setFormData((prev) => ({
+      ...prev,
+      timeline: prev.timeline.map((entry, i) => {
+        if (i !== index) {
+          return entry;
+        }
+
+        if (entry.imagePreviewUrl) {
+          URL.revokeObjectURL(entry.imagePreviewUrl);
+        }
+
+        return {
+          ...entry,
+          imageFile: file,
+          imagePreviewUrl: URL.createObjectURL(file),
+        };
+      }),
     }));
   };
 
@@ -169,19 +255,39 @@ export default function AddCasePage() {
       return;
     }
 
+    const suspectImageFiles = [];
     const normalizedSuspects = formData.suspects
-      .map((suspect) => ({
-        name: suspect.name?.trim() || "",
-        relationship: suspect.relationship?.trim() || "",
-        notes: suspect.notes?.trim() || "",
-      }))
+      .map((suspect) => {
+        const normalizedSuspect = {
+          name: suspect.name?.trim() || "",
+          relationship: suspect.relationship?.trim() || "",
+          notes: suspect.notes?.trim() || "",
+        };
+
+        if (suspect.imageFile instanceof File) {
+          normalizedSuspect.image_file_index = suspectImageFiles.length;
+          suspectImageFiles.push(suspect.imageFile);
+        }
+
+        return normalizedSuspect;
+      })
       .filter((suspect) => Boolean(suspect.name));
 
+    const timelineImageFiles = [];
     const normalizedTimeline = formData.timeline
-      .map((step) => ({
-        date: step.date,
-        event: step.event?.trim() || "",
-      }))
+      .map((step) => {
+        const normalizedStep = {
+          date: step.date,
+          event: step.event?.trim() || "",
+        };
+
+        if (step.imageFile instanceof File) {
+          normalizedStep.image_file_index = timelineImageFiles.length;
+          timelineImageFiles.push(step.imageFile);
+        }
+
+        return normalizedStep;
+      })
       .filter((step) => Boolean(step.date && step.event));
 
     const payload = new FormData();
@@ -209,6 +315,14 @@ export default function AddCasePage() {
       payload.append("evidenceFiles", item.file);
     });
 
+    suspectImageFiles.forEach((file) => {
+      payload.append("suspectImageFiles", file);
+    });
+
+    timelineImageFiles.forEach((file) => {
+      payload.append("timelineImageFiles", file);
+    });
+
     try {
       setIsSubmitting(true);
       await api.post("/cases", payload, {
@@ -222,6 +336,19 @@ export default function AddCasePage() {
           URL.revokeObjectURL(item.previewUrl);
         }
       });
+
+      formData.suspects.forEach((suspect) => {
+        if (suspect.imagePreviewUrl) {
+          URL.revokeObjectURL(suspect.imagePreviewUrl);
+        }
+      });
+
+      formData.timeline.forEach((entry) => {
+        if (entry.imagePreviewUrl) {
+          URL.revokeObjectURL(entry.imagePreviewUrl);
+        }
+      });
+
       setEvidenceFiles([]);
       setFormData(initialForm);
     } catch (apiError) {
@@ -391,6 +518,35 @@ export default function AddCasePage() {
                         <option value="arrested">Arrested</option>
                       </select>
                     </div>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-[auto,1fr] sm:items-center">
+                      <label className="cims-button-muted cursor-pointer px-3 py-2 text-xs">
+                        Upload suspect image
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(event) => {
+                            const selectedFile = event.target.files?.[0];
+                            if (selectedFile) {
+                              handleSuspectImageChange(index, selectedFile);
+                            }
+                            event.target.value = "";
+                          }}
+                        />
+                      </label>
+
+                      {suspect.imagePreviewUrl ? (
+                        <Image
+                          src={suspect.imagePreviewUrl}
+                          alt={`${suspect.name || "Suspect"} preview`}
+                          width={160}
+                          height={96}
+                          className="h-24 w-40 rounded-md border border-border object-cover"
+                        />
+                      ) : (
+                        <p className="text-text-secondary text-xs">No suspect image selected</p>
+                      )}
+                    </div>
                     <button
                       type="button"
                       onClick={() => removeSuspect(index)}
@@ -497,6 +653,35 @@ export default function AddCasePage() {
                         className="cims-input px-3 py-2 text-sm"
                         placeholder="Event description (e.g., Victim reported incident)"
                       />
+                    </div>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-[auto,1fr] sm:items-center">
+                      <label className="cims-button-muted cursor-pointer px-3 py-2 text-xs">
+                        Upload timeline image
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(event) => {
+                            const selectedFile = event.target.files?.[0];
+                            if (selectedFile) {
+                              handleTimelineImageChange(index, selectedFile);
+                            }
+                            event.target.value = "";
+                          }}
+                        />
+                      </label>
+
+                      {step.imagePreviewUrl ? (
+                        <Image
+                          src={step.imagePreviewUrl}
+                          alt={`Timeline ${index + 1} preview`}
+                          width={160}
+                          height={96}
+                          className="h-24 w-40 rounded-md border border-border object-cover"
+                        />
+                      ) : (
+                        <p className="text-text-secondary text-xs">No timeline image selected</p>
+                      )}
                     </div>
                     <button
                       type="button"

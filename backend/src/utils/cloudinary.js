@@ -41,4 +41,18 @@ const uploadEvidenceFileToCloudinary = async (filePath, mimeType) => {
   };
 };
 
-export { uploadEvidenceFileToCloudinary };
+const uploadImageFileToCloudinary = async (filePath, folder = "cims/images") => {
+  ensureCloudinaryConfig();
+
+  const uploadResult = await cloudinary.uploader.upload(filePath, {
+    folder,
+    resource_type: "image",
+  });
+
+  return {
+    url: uploadResult.secure_url,
+    type: "image",
+  };
+};
+
+export { uploadEvidenceFileToCloudinary, uploadImageFileToCloudinary };

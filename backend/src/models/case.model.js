@@ -19,6 +19,10 @@ const suspectSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    image_url: {
+      type: String,
+      trim: true,
+    },
   },
   { _id: false }
 );
@@ -68,6 +72,10 @@ const timelineEventSchema = new mongoose.Schema(
     event: {
       type: String,
       required: true,
+      trim: true,
+    },
+    image_url: {
+      type: String,
       trim: true,
     },
   },

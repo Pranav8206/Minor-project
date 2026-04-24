@@ -17,16 +17,22 @@ import upload from "../middleware/upload.middleware.js";
 
 const router = Router();
 
-router.route("/").get(protect, getCases).post(protect, upload.array("evidenceFiles", 10), createCase);
+const caseUploadFields = upload.fields([
+  { name: "evidenceFiles", maxCount: 10 },
+  { name: "suspectImageFiles", maxCount: 20 },
+  { name: "timelineImageFiles", maxCount: 20 },
+]);
+
+router.route("/").get(protect, getCases).post(protect, caseUploadFields, createCase);
 router.post("/similar", protect, getSimilarCases);
-router.post("/:id/suspects", protect, addCaseSuspect);
-router.post("/:id/timeline", protect, addCaseTimelineEvent);
+router.post("/:id/suspects", protect, upload.single("suspectImageFile"), addCaseSuspect);
+router.post("/:id/timeline", protect, upload.single("timelineImageFile"), addCaseTimelineEvent);
 router.get("/:id/timeline", protect, getCaseTimeline);
 router.get("/:id/recommendations", protect, getCaseRecommendations);
 router
   .route("/:id")
   .get(protect, getCaseById)
-  .put(protect, upload.array("evidenceFiles", 10), updateCase)
+  .put(protect, caseUploadFields, updateCase)
   .delete(protect, deleteCase);
 
 export default router;

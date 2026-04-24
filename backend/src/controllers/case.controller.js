@@ -7,7 +7,7 @@ import asyncHandler from "../utils/asyncHandler.js";
 import { generateSearchInsights } from "../utils/groqClient.js";
 import { analyzeCaseDescription, searchSimilarCases } from "../utils/pythonAiClient.js";
 import calculateRiskScore from "../utils/riskScore.js";
-import { uploadEvidenceFileToCloudinary } from "../utils/cloudinary.js";
+import { uploadEvidenceFileToCloudinary, uploadImageFileToCloudinary } from "../utils/cloudinary.js";
 
 const sanitizePayload = (payload) =>
   Object.fromEntries(
@@ -107,6 +107,15 @@ const normalizeCaseEntities = (value) => {
     .filter(Boolean);
 };
 
+const normalizeImageUrl = (value) => {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  return trimmed || undefined;
+};
+
 const mapAiEntitiesToCaseEntities = (entitiesPayload) => {
   if (!entitiesPayload || typeof entitiesPayload !== "object") {
     return [];
@@ -161,6 +170,12 @@ const normalizeSuspects = (value) => {
       const relationship =
         typeof suspect.relationship === "string" ? suspect.relationship.trim() : undefined;
       const notes = typeof suspect.notes === "string" ? suspect.notes.trim() : undefined;
+      const image_url = normalizeImageUrl(suspect.image_url);
+      const image_file_index = Number.isInteger(suspect.image_file_index)
+        ? suspect.image_file_index
+        : Number.isInteger(Number(suspect.image_file_index))
+        ? Number(suspect.image_file_index)
+        : undefined;
 
       if (!name) {
         return null;
@@ -170,6 +185,8 @@ const normalizeSuspects = (value) => {
         name,
         relationship,
         notes,
+        image_url,
+        image_file_index,
       };
     })
     .filter(Boolean);
@@ -218,8 +235,14 @@ const syncSuspectsForCase = async (caseId, suspects) => {
       : 0;
     const riskScore = calculateRiskScore(linkedCaseCount);
 
+    if (suspect.image_url && suspectDoc.image_url !== suspect.image_url) {
+      suspectDoc.image_url = suspect.image_url;
+    }
+
     if (suspectDoc.risk_score !== riskScore) {
       suspectDoc.risk_score = riskScore;
+      await suspectDoc.save();
+    } else if (suspect.image_url && suspectDoc.isModified("image_url")) {
       await suspectDoc.save();
     }
 
@@ -228,6 +251,7 @@ const syncSuspectsForCase = async (caseId, suspects) => {
       name: suspectDoc.name,
       relationship: suspect.relationship,
       notes: suspect.notes,
+      image_url: suspect.image_url || suspectDoc.image_url,
     });
   }
 
@@ -247,12 +271,23 @@ const normalizeTimeline = (value) => {
 
       const date = new Date(entry.date);
       const event = typeof entry.event === "string" ? entry.event.trim() : "";
+      const image_url = normalizeImageUrl(entry.image_url);
+      const image_file_index = Number.isInteger(entry.image_file_index)
+        ? entry.image_file_index
+        : Number.isInteger(Number(entry.image_file_index))
+        ? Number(entry.image_file_index)
+        : undefined;
 
       if (Number.isNaN(date.getTime()) || !event) {
         return null;
       }
 
-      return { date, event };
+      return {
+        date,
+        event,
+        image_url,
+        image_file_index,
+      };
     })
     .filter(Boolean)
     .sort((a, b) => a.date - b.date);
@@ -331,6 +366,68 @@ const uploadIncomingEvidenceFiles = async (files = []) => {
       files.map((file) => fs.unlink(file.path).catch(() => undefined))
     );
   }
+};
+
+const uploadIncomingImageFiles = async (files = [], folder = "cims/images") => {
+  if (!Array.isArray(files) || files.length === 0) {
+    return [];
+  }
+
+  const uploaded = [];
+
+  try {
+    for (const file of files) {
+      if (!file?.mimetype?.startsWith("image/")) {
+        throw new Error("Only image files are allowed for suspect and timeline uploads");
+      }
+
+      const uploadedFile = await uploadImageFileToCloudinary(file.path, folder);
+      uploaded.push(uploadedFile.url);
+    }
+
+    return uploaded;
+  } finally {
+    await Promise.all(
+      files.map((file) => fs.unlink(file.path).catch(() => undefined))
+    );
+  }
+};
+
+const getUploadedFilesByField = (files, fieldName) => {
+  if (!files) {
+    return [];
+  }
+
+  if (Array.isArray(files)) {
+    return fieldName === "evidenceFiles" ? files : [];
+  }
+
+  const bucket = files[fieldName];
+  return Array.isArray(bucket) ? bucket : [];
+};
+
+const attachUploadedImagesByIndex = (items = [], uploadedImageUrls = []) => {
+  if (!Array.isArray(items) || items.length === 0 || !Array.isArray(uploadedImageUrls)) {
+    return items;
+  }
+
+  let fallbackFileIndex = 0;
+
+  return items.map((item) => {
+    const preparedItem = { ...item };
+    const explicitFileIndex = Number.isInteger(item.image_file_index) ? item.image_file_index : undefined;
+
+    if (explicitFileIndex !== undefined && uploadedImageUrls[explicitFileIndex]) {
+      preparedItem.image_url = uploadedImageUrls[explicitFileIndex];
+    } else if (explicitFileIndex === undefined && uploadedImageUrls[fallbackFileIndex]) {
+      preparedItem.image_url = uploadedImageUrls[fallbackFileIndex];
+      fallbackFileIndex += 1;
+    }
+
+    delete preparedItem.image_file_index;
+
+    return preparedItem;
+  });
 };
 
 const normalizePaginationValue = (value, fallback, minimum, maximum) => {
@@ -572,7 +669,17 @@ const generateCaseSummary = ({
 
 export const createCase = asyncHandler(async (req, res) => {
   const caseData = parseCasePayload(req.body);
-  const uploadedEvidence = await uploadIncomingEvidenceFiles(req.files);
+  const uploadedEvidence = await uploadIncomingEvidenceFiles(
+    getUploadedFilesByField(req.files, "evidenceFiles")
+  );
+  const uploadedSuspectImages = await uploadIncomingImageFiles(
+    getUploadedFilesByField(req.files, "suspectImageFiles"),
+    "cims/suspects"
+  );
+  const uploadedTimelineImages = await uploadIncomingImageFiles(
+    getUploadedFilesByField(req.files, "timelineImageFiles"),
+    "cims/timeline"
+  );
 
   if (caseData.assigned_officer === undefined && req.user?._id) {
     caseData.assigned_officer = req.user._id;
@@ -580,6 +687,14 @@ export const createCase = asyncHandler(async (req, res) => {
 
   if (uploadedEvidence.length > 0) {
     caseData.evidence = [...(Array.isArray(caseData.evidence) ? caseData.evidence : []), ...uploadedEvidence];
+  }
+
+  if (Array.isArray(caseData.suspects) && caseData.suspects.length > 0) {
+    caseData.suspects = attachUploadedImagesByIndex(caseData.suspects, uploadedSuspectImages);
+  }
+
+  if (Array.isArray(caseData.timeline) && caseData.timeline.length > 0) {
+    caseData.timeline = attachUploadedImagesByIndex(caseData.timeline, uploadedTimelineImages);
   }
 
   const normalizedDescription =
@@ -932,7 +1047,17 @@ export const updateCase = asyncHandler(async (req, res) => {
   }
 
   const updateData = parseCasePayload(req.body, { partial: true });
-  const uploadedEvidence = await uploadIncomingEvidenceFiles(req.files);
+  const uploadedEvidence = await uploadIncomingEvidenceFiles(
+    getUploadedFilesByField(req.files, "evidenceFiles")
+  );
+  const uploadedSuspectImages = await uploadIncomingImageFiles(
+    getUploadedFilesByField(req.files, "suspectImageFiles"),
+    "cims/suspects"
+  );
+  const uploadedTimelineImages = await uploadIncomingImageFiles(
+    getUploadedFilesByField(req.files, "timelineImageFiles"),
+    "cims/timeline"
+  );
 
   const existingCase = await Case.findById(id);
 
@@ -949,6 +1074,38 @@ export const updateCase = asyncHandler(async (req, res) => {
       ? existingCase.evidence
       : [];
     updateData.evidence = [...evidenceBase, ...uploadedEvidence];
+  }
+
+  if (uploadedSuspectImages.length > 0) {
+    const suspectBase = Array.isArray(updateData.suspects)
+      ? updateData.suspects
+      : Array.isArray(existingCase.suspects)
+      ? existingCase.suspects.map((suspect) => ({
+          suspect_id: suspect.suspect_id,
+          name: suspect.name,
+          relationship: suspect.relationship,
+          notes: suspect.notes,
+          image_url: suspect.image_url,
+        }))
+      : [];
+    updateData.suspects = attachUploadedImagesByIndex(suspectBase, uploadedSuspectImages);
+  } else if (Array.isArray(updateData.suspects)) {
+    updateData.suspects = attachUploadedImagesByIndex(updateData.suspects, []);
+  }
+
+  if (uploadedTimelineImages.length > 0) {
+    const timelineBase = Array.isArray(updateData.timeline)
+      ? updateData.timeline
+      : Array.isArray(existingCase.timeline)
+      ? existingCase.timeline.map((entry) => ({
+          date: entry.date,
+          event: entry.event,
+          image_url: entry.image_url,
+        }))
+      : [];
+    updateData.timeline = attachUploadedImagesByIndex(timelineBase, uploadedTimelineImages);
+  } else if (Array.isArray(updateData.timeline)) {
+    updateData.timeline = attachUploadedImagesByIndex(updateData.timeline, []);
   }
 
   const shouldAutoGenerateSummary =
@@ -1060,7 +1217,10 @@ export const addCaseSuspect = asyncHandler(async (req, res) => {
     });
   }
 
-  const suspects = normalizeSuspects(Array.isArray(req.body?.suspects) ? req.body.suspects : []);
+  const parsedSuspects = Array.isArray(req.body?.suspects)
+    ? req.body.suspects
+    : parseJsonArrayField(req.body?.suspects, []);
+  const suspects = normalizeSuspects(parsedSuspects);
   if (!Array.isArray(suspects) || suspects.length === 0) {
     return res.status(400).json({
       message: "At least one valid suspect is required",
@@ -1079,9 +1239,15 @@ export const addCaseSuspect = asyncHandler(async (req, res) => {
         name: suspect.name,
         relationship: suspect.relationship,
         notes: suspect.notes,
+        image_url: suspect.image_url,
       }))
     : [];
-  const mergedSuspects = [...existingSuspects, ...suspects];
+  const uploadedSuspectImage = await uploadIncomingImageFiles(
+    req.file ? [req.file] : [],
+    "cims/suspects"
+  );
+  const incomingSuspects = attachUploadedImagesByIndex(suspects, uploadedSuspectImage);
+  const mergedSuspects = [...existingSuspects, ...incomingSuspects];
   const linkedSuspects = await syncSuspectsForCase(caseItem._id, mergedSuspects);
 
   caseItem.suspects = linkedSuspects;
@@ -1102,7 +1268,10 @@ export const addCaseTimelineEvent = asyncHandler(async (req, res) => {
     });
   }
 
-  const timelineEntries = normalizeTimeline(Array.isArray(req.body?.timeline) ? req.body.timeline : []);
+  const parsedTimelineEntries = Array.isArray(req.body?.timeline)
+    ? req.body.timeline
+    : parseJsonArrayField(req.body?.timeline, []);
+  const timelineEntries = normalizeTimeline(parsedTimelineEntries);
   if (!Array.isArray(timelineEntries) || timelineEntries.length === 0) {
     return res.status(400).json({
       message: "At least one valid timeline event is required",
@@ -1117,7 +1286,12 @@ export const addCaseTimelineEvent = asyncHandler(async (req, res) => {
   }
 
   const existingTimeline = Array.isArray(caseItem.timeline) ? caseItem.timeline : [];
-  caseItem.timeline = normalizeTimeline([...existingTimeline, ...timelineEntries]);
+  const uploadedTimelineImage = await uploadIncomingImageFiles(
+    req.file ? [req.file] : [],
+    "cims/timeline"
+  );
+  const incomingTimelineEntries = attachUploadedImagesByIndex(timelineEntries, uploadedTimelineImage);
+  caseItem.timeline = normalizeTimeline([...existingTimeline, ...incomingTimelineEntries]);
   await caseItem.save();
 
   return res.status(200).json({
