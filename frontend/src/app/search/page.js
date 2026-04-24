@@ -161,10 +161,6 @@ export default function SearchPage() {
 
           <div className="grid gap-3 sm:grid-cols-3">
             <label className="relative block">
-              <MapPin
-                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary"
-                size={16}
-              />
               <input
                 value={location}
                 onChange={(event) => setLocation(event.target.value)}

@@ -9,10 +9,13 @@ import {
   Legend,
   LineElement,
   LinearScale,
+  Filler,
+  RadialLinearScale,
   PointElement,
   Tooltip,
 } from "chart.js";
-import { Bar, Doughnut, Line } from "react-chartjs-2";
+import { Bar, Doughnut, Line, PolarArea } from "react-chartjs-2";
+import { AlertTriangle, Flame, ShieldAlert, Sparkles, TrendingUp } from "lucide-react";
 
 import api from "../../lib/api";
 import useAuthGuard from "../../hooks/useAuthGuard";
@@ -20,20 +23,57 @@ import useAuthGuard from "../../hooks/useAuthGuard";
 ChartJS.register(
   CategoryScale,
   LinearScale,
+  RadialLinearScale,
   PointElement,
   LineElement,
   BarElement,
   ArcElement,
+  Filler,
   Tooltip,
   Legend
 );
 
 const statusTone = {
-  open: "text-primary bg-background border border-border",
-  investigating: "text-primary bg-background border border-border",
-  closed: "text-text-secondary bg-background border border-border",
-  archived: "text-text-secondary bg-background border border-border",
+  open: "text-emerald-200 bg-emerald-500/12 border border-emerald-400/25",
+  investigating: "text-amber-200 bg-amber-500/12 border border-amber-400/25",
+  closed: "text-slate-300 bg-slate-500/12 border border-slate-400/25",
+  archived: "text-zinc-300 bg-zinc-500/12 border border-zinc-400/25",
 };
+
+const metricCards = [
+  {
+    id: "total",
+    label: "Total Cases",
+    field: "totalCases",
+    Icon: TrendingUp,
+    accentClass: "text-cyan-200 border-cyan-400/35 bg-cyan-500/12",
+    hint: "All tracked investigations",
+  },
+  {
+    id: "active",
+    label: "Active Cases",
+    field: "openCases",
+    Icon: ShieldAlert,
+    accentClass: "text-amber-100 border-amber-400/35 bg-amber-500/12",
+    hint: "Open and investigating",
+  },
+  {
+    id: "closed",
+    label: "Closed Cases",
+    field: "closedCases",
+    Icon: Sparkles,
+    accentClass: "text-violet-100 border-violet-400/35 bg-violet-500/12",
+    hint: "Resolved investigations",
+  },
+  {
+    id: "high",
+    label: "High Priority",
+    field: "highPriorityCases",
+    Icon: AlertTriangle,
+    accentClass: "text-rose-100 border-rose-400/35 bg-rose-500/12",
+    hint: "Urgent response required",
+  },
+];
 
 const formatRelativeTime = (value) => {
   const date = new Date(value);
@@ -113,6 +153,29 @@ export default function DashboardPage() {
   );
   const recentCases = useMemo(() => allCases.slice(0, 8), [allCases]);
 
+  const totalTimelineCases = useMemo(
+    () => timeline.reduce((sum, item) => sum + Number(item.count || 0), 0),
+    [timeline]
+  );
+
+  const previousTimelineCases = useMemo(() => {
+    if (timeline.length < 2) {
+      return 0;
+    }
+
+    return timeline
+      .slice(0, -1)
+      .reduce((sum, item) => sum + Number(item.count || 0), 0);
+  }, [timeline]);
+
+  const periodGrowth = useMemo(() => {
+    if (!previousTimelineCases) {
+      return totalTimelineCases > 0 ? 100 : 0;
+    }
+
+    return Math.round(((totalTimelineCases - previousTimelineCases) / previousTimelineCases) * 100);
+  }, [previousTimelineCases, totalTimelineCases]);
+
   const trend = useMemo(() => {
     if (!overview.totalCases) {
       return "No case data yet";
@@ -136,21 +199,33 @@ export default function DashboardPage() {
       .slice(0, 6);
   }, [allCases]);
 
-  const locationChartData = useMemo(
-    () => ({
-      labels: locationStats.slice(0, 8).map((item) => item.location),
+  const locationChartData = useMemo(() => {
+    const palette = [
+      "rgba(56, 189, 248, 0.8)",
+      "rgba(20, 184, 166, 0.8)",
+      "rgba(249, 115, 22, 0.8)",
+      "rgba(244, 114, 182, 0.8)",
+      "rgba(168, 85, 247, 0.8)",
+      "rgba(96, 165, 250, 0.8)",
+      "rgba(59, 130, 246, 0.8)",
+      "rgba(236, 72, 153, 0.8)",
+    ];
+
+    const topLocations = locationStats.slice(0, 8);
+
+    return {
+      labels: topLocations.map((item) => item.location),
       datasets: [
         {
           label: "Cases",
-          data: locationStats.slice(0, 8).map((item) => item.count),
-          backgroundColor: "var(--primary)",
-          borderRadius: 10,
-          borderSkipped: false,
+          data: topLocations.map((item) => item.count),
+          backgroundColor: topLocations.map((_, index) => palette[index % palette.length]),
+          borderColor: "rgba(9, 12, 18, 0.2)",
+          borderWidth: 1,
         },
       ],
-    }),
-    [locationStats]
-  );
+    };
+  }, [locationStats]);
 
   const lineData = useMemo(
     () => ({
@@ -159,12 +234,15 @@ export default function DashboardPage() {
         {
           label: "Cases",
           data: timeline.map((item) => item.count),
-          borderColor: "var(--primary)",
-          backgroundColor: "var(--card)",
-          tension: 0.35,
+          borderColor: "rgba(56, 189, 248, 0.9)",
+          backgroundColor: "rgba(56, 189, 248, 0.18)",
+          tension: 0.38,
           fill: true,
-          pointRadius: 4,
+          pointRadius: 3,
           pointHoverRadius: 5,
+          pointBackgroundColor: "rgba(15, 23, 42, 0.95)",
+          pointBorderWidth: 2,
+          pointBorderColor: "rgba(56, 189, 248, 0.9)",
         },
       ],
     }),
@@ -178,20 +256,61 @@ export default function DashboardPage() {
         {
           data: typeBreakdown.map((item) => item.count),
           backgroundColor: [
-            "var(--primary)",
-            "var(--text-primary)",
-            "var(--text-secondary)",
-            "var(--card)",
-            "var(--border)",
-            "var(--primary)",
-            "var(--text-secondary)",
+            "rgba(244, 114, 182, 0.9)",
+            "rgba(59, 130, 246, 0.9)",
+            "rgba(20, 184, 166, 0.9)",
+            "rgba(249, 115, 22, 0.9)",
+            "rgba(168, 85, 247, 0.9)",
+            "rgba(56, 189, 248, 0.9)",
           ],
-          borderColor: "var(--background)",
+          borderColor: "rgba(9, 12, 18, 0.8)",
           borderWidth: 2,
         },
       ],
     }),
     [typeBreakdown]
+  );
+
+  const statusData = useMemo(() => {
+    const statusMap = new Map();
+
+    for (const caseItem of allCases) {
+      const key = (caseItem.status || "unknown").toLowerCase();
+      statusMap.set(key, (statusMap.get(key) || 0) + 1);
+    }
+
+    const labels = [...statusMap.keys()].map((status) =>
+      status.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())
+    );
+
+    return {
+      labels,
+      datasets: [
+        {
+          label: "Status",
+          data: [...statusMap.values()],
+          backgroundColor: [
+            "rgba(16, 185, 129, 0.75)",
+            "rgba(245, 158, 11, 0.75)",
+            "rgba(14, 165, 233, 0.75)",
+            "rgba(99, 102, 241, 0.75)",
+            "rgba(244, 114, 182, 0.75)",
+          ],
+          borderColor: "rgba(17, 24, 39, 0.7)",
+          borderWidth: 1,
+        },
+      ],
+    };
+  }, [allCases]);
+
+  const dashboardMetrics = useMemo(
+    () => [
+      { ...metricCards[0], value: overview.totalCases },
+      { ...metricCards[1], value: activeCases },
+      { ...metricCards[2], value: overview.closedCases },
+      { ...metricCards[3], value: highPriorityCases },
+    ],
+    [activeCases, highPriorityCases, overview.closedCases, overview.totalCases]
   );
 
   if (isChecking) {
@@ -208,8 +327,41 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="cims-card text-text-secondary p-6 text-sm">
-        Loading dashboard...
+      <div className="space-y-6">
+        <section className="dashboard-hero-panel p-6 md:p-8">
+          <div className="dashboard-skeleton h-4 w-36 rounded-full" />
+          <div className="mt-3 dashboard-skeleton h-9 w-72 rounded-xl" />
+          <div className="mt-3 dashboard-skeleton h-4 w-full max-w-xl rounded-full" />
+        </section>
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="dashboard-panel p-5">
+              <div className="dashboard-skeleton h-4 w-28 rounded-full" />
+              <div className="mt-4 dashboard-skeleton h-10 w-20 rounded-xl" />
+              <div className="mt-4 dashboard-skeleton h-3 w-32 rounded-full" />
+            </div>
+          ))}
+        </div>
+
+        <div className="grid gap-6 xl:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <section key={index} className="dashboard-panel p-5">
+              <div className="dashboard-skeleton h-5 w-40 rounded-full" />
+              <div className="mt-2 dashboard-skeleton h-3 w-56 rounded-full" />
+              <div className="mt-5 dashboard-skeleton h-64 w-full rounded-2xl" />
+            </section>
+          ))}
+        </div>
+
+        <section className="dashboard-panel p-5">
+          <div className="dashboard-skeleton h-5 w-44 rounded-full" />
+          <div className="mt-4 space-y-3">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="dashboard-skeleton h-20 w-full rounded-2xl" />
+            ))}
+          </div>
+        </section>
       </div>
     );
   }
@@ -222,34 +374,49 @@ export default function DashboardPage() {
         </div>
       ) : null}
 
-      <div className="rounded-3xl border border-border bg-card px-6 py-7 shadow-lg shadow-black/20">
-        <p className="text-text-secondary text-xs uppercase tracking-[0.2em]">CIMS Dashboard</p>
-        <h2 className="mt-2 text-2xl font-semibold text-text-primary">Operational Crime Intelligence</h2>
-        <p className="text-text-secondary mt-1 text-sm">Live view of workload, hotspot behavior, and recent investigation activity.</p>
+      <section className="dashboard-hero-panel px-6 py-7 md:px-8 md:py-9">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-cyan-100/80 text-xs font-semibold uppercase tracking-[0.2em]">CIMS Dashboard</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white md:text-3xl">
+              Operational Intelligence Matrix
+            </h2>
+            <p className="mt-2 max-w-xl text-sm text-slate-200/85">
+              Unified visibility of case load, hotspot volatility, and active investigation movement.
+            </p>
+          </div>
+
+          <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-100">
+            <Flame size={14} />
+            {periodGrowth >= 0 ? "+" : ""}
+            {periodGrowth}% trend vs prior window
+          </div>
+        </div>
+      </section>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {dashboardMetrics.map((metric) => {
+          const Icon = metric.Icon;
+
+          return (
+            <article key={metric.id} className="dashboard-panel p-5">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-sm font-medium text-slate-300">{metric.label}</p>
+                <span className={`rounded-xl border p-2 ${metric.accentClass}`}>
+                  <Icon size={16} />
+                </span>
+              </div>
+              <p className="mt-4 text-4xl font-semibold tracking-tight text-white">{metric.value}</p>
+              <p className="mt-2 text-xs text-slate-300">{metric.id === "total" ? trend : metric.hint}</p>
+            </article>
+          );
+        })}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <article className="cims-card p-5">
-          <p className="text-text-secondary text-sm font-medium">Total cases</p>
-          <p className="text-text-primary mt-3 text-4xl font-semibold">{overview.totalCases}</p>
-          <p className="text-primary mt-1 text-xs font-medium">{trend}</p>
-        </article>
-        <article className="cims-card p-5">
-          <p className="text-text-secondary text-sm font-medium">Active cases</p>
-          <p className="text-text-primary mt-3 text-4xl font-semibold">{activeCases}</p>
-          <p className="text-text-secondary mt-1 text-xs font-medium">Open and investigating cases</p>
-        </article>
-        <article className="cims-card p-5">
-          <p className="text-text-secondary text-sm font-medium">High priority cases</p>
-          <p className="text-text-primary mt-3 text-4xl font-semibold">{highPriorityCases}</p>
-          <p className="text-text-secondary mt-1 text-xs font-medium">Urgent cases requiring quick response</p>
-        </article>
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-2">
-        <section className="cims-card p-5">
+      <div className="grid gap-6 xl:grid-cols-3">
+        <section className="dashboard-panel p-5 xl:col-span-2">
           <h3 className="text-text-primary text-lg font-semibold">Crime by location</h3>
-          <p className="text-text-secondary mt-1 text-sm">Top areas by reported case volume.</p>
+          <p className="text-text-secondary mt-1 text-sm">Hotspot density across top reporting zones.</p>
           <div className="mt-5 h-72">
             <Bar
               data={locationChartData}
@@ -257,6 +424,7 @@ export default function DashboardPage() {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
+                indexAxis: "y",
                 scales: {
                   y: {
                     beginAtZero: true,
@@ -265,8 +433,7 @@ export default function DashboardPage() {
                   },
                   x: {
                     ticks: {
-                      maxRotation: 30,
-                      minRotation: 0,
+                      precision: 0,
                       color: "var(--text-secondary)",
                     },
                     grid: { color: "var(--border)" },
@@ -277,7 +444,38 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <section className="cims-card p-5">
+        <section className="dashboard-panel p-5">
+          <h3 className="text-text-primary text-lg font-semibold">Status pressure map</h3>
+          <p className="text-text-secondary mt-1 text-sm">Quick view of case status distribution.</p>
+          <div className="mt-5 h-72">
+            <PolarArea
+              data={statusData}
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                  r: {
+                    grid: { color: "color-mix(in srgb, var(--border) 80%, transparent)" },
+                    angleLines: { color: "color-mix(in srgb, var(--border) 70%, transparent)" },
+                    ticks: { color: "var(--text-secondary)", backdropColor: "transparent", precision: 0 },
+                    pointLabels: { color: "var(--text-secondary)", font: { size: 11 } },
+                  },
+                },
+                plugins: {
+                  legend: {
+                    position: "bottom",
+                    labels: {
+                      color: "var(--text-secondary)",
+                      boxWidth: 12,
+                    },
+                  },
+                },
+              }}
+            />
+          </div>
+        </section>
+
+        <section className="dashboard-panel p-5">
           <h3 className="text-text-primary text-lg font-semibold">Crime by type</h3>
           <p className="text-text-secondary mt-1 text-sm">Distribution across major crime categories.</p>
           <div className="mt-5 h-72">
@@ -289,7 +487,7 @@ export default function DashboardPage() {
                 plugins: {
                   legend: {
                     position: "bottom",
-                    labels: { color: "var(--text-secondary)" },
+                    labels: { color: "var(--text-secondary)", boxWidth: 10 },
                   },
                 },
               }}
@@ -297,9 +495,9 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <section className="cims-card p-5 xl:col-span-2">
+        <section className="dashboard-panel p-5 xl:col-span-2">
           <h3 className="text-text-primary text-lg font-semibold">Crime over time</h3>
-          <p className="text-text-secondary mt-1 text-sm">Monthly trend showing incident frequency over time.</p>
+          <p className="text-text-secondary mt-1 text-sm">Incident rhythm and acceleration over time.</p>
           <div className="mt-5 h-80">
             <Line
               data={lineData}
@@ -324,7 +522,7 @@ export default function DashboardPage() {
         </section>
       </div>
 
-      <section className="cims-card p-5">
+      <section className="dashboard-panel p-5">
         <div className="flex items-center justify-between gap-3">
           <h3 className="text-text-primary text-lg font-semibold">Recent activity feed</h3>
           <span className="text-text-secondary bg-background rounded-full px-3 py-1 text-xs font-medium">
@@ -340,7 +538,7 @@ export default function DashboardPage() {
             recentCases.map((item) => (
               <article
                 key={item._id}
-                className="rounded-2xl border border-border bg-card px-4 py-3 transition hover:border-primary/45 hover:shadow-sm"
+                className="rounded-2xl border border-border bg-card px-4 py-3 transition hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-[0_14px_26px_rgba(0,0,0,0.26)]"
               >
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="text-text-primary text-sm font-semibold">{item.title || "Untitled case"}</p>
