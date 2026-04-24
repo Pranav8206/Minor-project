@@ -1,26 +1,13 @@
 from functools import lru_cache
+import hashlib
 from math import sqrt
-
-import spacy
-from sentence_transformers import SentenceTransformer
-from spacy.matcher import PhraseMatcher
+import re
 
 from .config import settings
 
 
 class NLPService:
     def __init__(self) -> None:
-        self._embedding_model = SentenceTransformer(settings.sentence_model_name)
-        try:
-            self._nlp = spacy.load(settings.spacy_model_name)
-        except OSError as exc:
-            message = (
-                f"spaCy model '{settings.spacy_model_name}' is not installed. "
-                "Install it with: python -m spacy download en_core_web_sm"
-            )
-            raise RuntimeError(message) from exc
-
-        self._weapon_matcher = PhraseMatcher(self._nlp.vocab, attr="LOWER")
         self._weapon_terms = [
             "gun",
             "pistol",
@@ -35,27 +22,20 @@ class NLPService:
             "bat",
             "crowbar",
         ]
-        self._weapon_matcher.add("WEAPON", [self._nlp.make_doc(term) for term in self._weapon_terms])
+        self._weapon_term_set = set(self._weapon_terms)
+        self._embedding_dimensions = max(int(getattr(settings, "embedding_dimensions", 128)), 16)
+        self._word_pattern = re.compile(r"[A-Za-z][A-Za-z'-]{1,}")
+        self._person_pattern = re.compile(r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b")
+        self._location_context_pattern = re.compile(
+            r"\b(?:in|at|near|around|from)\s+([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+)*)\b"
+        )
 
     def analyze(self, text: str) -> dict:
-        embedding = self._embedding_model.encode(text, normalize_embeddings=True).tolist()
-        doc = self._nlp(text)
-
-        persons = self._unique_preserve_order(
-            ent.text.strip() for ent in doc.ents if ent.label_ == "PERSON"
-        )
-
-        locations = self._unique_preserve_order(
-            ent.text.strip()
-            for ent in doc.ents
-            if ent.label_ in {"GPE", "LOC", "FAC"}
-        )
-
-        matched_weapons = []
-        for _, start, end in self._weapon_matcher(doc):
-            matched_weapons.append(doc[start:end].text.strip())
-
-        weapons = self._unique_preserve_order(matched_weapons)
+        embedding = self._embed_text(text)
+        locations = self._extract_locations(text)
+        location_set = {location.lower() for location in locations}
+        persons = [person for person in self._extract_persons(text) if person.lower() not in location_set]
+        weapons = self._extract_weapons(text)
 
         return {
             "embedding": embedding,
@@ -72,10 +52,7 @@ class NLPService:
         stored_embeddings: list[list[float]],
         top_k: int = 5,
     ) -> list[dict]:
-        query_embedding = self._embedding_model.encode(
-            query,
-            normalize_embeddings=False,
-        ).tolist()
+        query_embedding = self._embed_text(query)
 
         scored_matches = []
 
@@ -91,6 +68,41 @@ class NLPService:
 
         scored_matches.sort(key=lambda item: item["similarity"], reverse=True)
         return scored_matches[:top_k]
+
+    def _embed_text(self, text: str) -> list[float]:
+        tokens = [token.lower() for token in self._word_pattern.findall(text)]
+        if not tokens:
+            return [0.0] * self._embedding_dimensions
+
+        vector = [0.0] * self._embedding_dimensions
+
+        for token in tokens:
+            digest = hashlib.sha256(token.encode("utf-8")).digest()
+            index = int.from_bytes(digest[:4], "big") % self._embedding_dimensions
+            sign = -1.0 if digest[4] % 2 else 1.0
+            vector[index] += sign
+
+        norm = sqrt(sum(value * value for value in vector))
+        if norm == 0.0:
+            return vector
+
+        return [value / norm for value in vector]
+
+    def _extract_persons(self, text: str) -> list[str]:
+        return self._unique_preserve_order(
+            match.group(1).strip()
+            for match in self._person_pattern.finditer(text)
+        )
+
+    def _extract_locations(self, text: str) -> list[str]:
+        return self._unique_preserve_order(
+            match.group(1).strip()
+            for match in self._location_context_pattern.finditer(text)
+        )
+
+    def _extract_weapons(self, text: str) -> list[str]:
+        tokens = [token.lower() for token in self._word_pattern.findall(text)]
+        return self._unique_preserve_order(token for token in tokens if token in self._weapon_term_set)
 
     @staticmethod
     def _cosine_similarity(a: list[float], b: list[float]) -> float | None:

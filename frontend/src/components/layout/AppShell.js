@@ -127,7 +127,7 @@ export default function AppShell({ children }) {
     <div className="bg-background text-text-primary min-h-screen">
       <div className="mx-auto flex min-h-screen w-full max-w-400 flex-col lg:flex-row">
         {/* Desktop Sidebar */}
-        <aside className="hidden w-20 shrink-0 border-r border-border/90 bg-card/90 p-4 backdrop-blur lg:flex lg:flex-col">
+        <aside className="hidden w-25 shrink-0 border-r border-border/90 bg-card/90 p-4 backdrop-blur lg:flex lg:flex-col">
           <div className="flex flex-col items-center gap-2 mb-8 pb-6 border-b border-border/50">
             <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
               <span className="text-white font-bold text-lg">C</span>
@@ -260,34 +260,21 @@ export default function AppShell({ children }) {
           <header className="sticky top-0 z-20 hidden border-b border-border/80 bg-card/90 px-6 py-5 backdrop-blur lg:block xl:px-8">
             <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
               <div>
-                <p className="text-text-secondary text-2xl leading-tight">
-                  Welcome, {userProfile.name} | CIMS Case Management
-                </p>
-                <h2 className="mt-2 text-5xl font-semibold tracking-tight text-text-primary">
+               
+                <h2 className="mt-2 text-3xl md:text-4xl font-semibold tracking-tight text-text-primary">
                   {getTopBarTitle(pathname)}
                 </h2>
               </div>
 
               <div className="flex items-center gap-3 self-start">
-                <button
-                  type="button"
-                  aria-label="Notifications"
-                  className="relative rounded-2xl border border-border bg-card p-3 text-text-secondary transition hover:border-primary/45 hover:text-text-primary"
-                >
-                  <Bell size={20} />
-                  <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-primary" />
-                </button>
+                
 
-                <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-3 py-2">
+                <div className="flex items-center gap-3  px-3 py-2">
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-background text-sm font-semibold text-text-primary">
                     {userProfile.initials}
                   </div>
                   <div>
                     <p className="text-text-primary text-xl font-medium leading-tight">{userProfile.name}</p>
-                    <p className="text-text-secondary text-sm leading-tight">Rank: {userProfile.rank}</p>
-                    <p className="text-text-secondary text-sm leading-tight">
-                      Department: {userProfile.department}
-                    </p>
                   </div>
                 </div>
               </div>

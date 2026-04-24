@@ -30,23 +30,22 @@ export default function FilterBar({
       <div className="grid gap-3 xl:grid-cols-[1.2fr,repeat(4,minmax(0,1fr))]">
         <label className="relative block xl:col-span-1">
           <span className="sr-only">Search cases</span>
-          <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary" size={18} />
           <input
             value={searchValue}
             onChange={(event) => onSearchChange(event.target.value)}
             placeholder="Search cases..."
-            className="cims-input h-12 pl-11 pr-4"
+            className="cims-input h-12 pl-11"
           />
         </label>
-
-        <label className="block">
+        
+        <div className="w-full flex gap-3">
+        <label className="block w-1/2">
           <span className="sr-only">Status filter</span>
           <div className="relative">
-            <Filter className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary" size={16} />
             <select
               value={statusValue}
               onChange={(event) => onStatusChange(event.target.value)}
-              className="cims-input h-12 pl-10 pr-4"
+              className="cims-input h-12 pl-10 pr-4 "
             >
               {statusOptions.map((option) => (
                 <option key={option.value || "all-statuses"} value={option.value}>
@@ -57,7 +56,7 @@ export default function FilterBar({
           </div>
         </label>
 
-        <label className="block">
+        <label className="block w-1/2">
           <span className="sr-only">Primary type filter</span>
           <select
             value={primaryTypeValue}
@@ -72,7 +71,7 @@ export default function FilterBar({
             ))}
           </select>
         </label>
-
+</div>
         <div className="grid gap-3 sm:grid-cols-2 xl:col-span-1">
           <label className="block">
             <span className="sr-only">Start date</span>

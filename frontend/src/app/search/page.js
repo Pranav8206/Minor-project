@@ -143,10 +143,7 @@ export default function SearchPage() {
         <form className="mt-5 space-y-4" onSubmit={handleSearch}>
           <div className="grid gap-3 sm:grid-cols-[1.3fr,auto]">
             <label className="relative block">
-              <SearchIcon
-                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary"
-                size={18}
-              />
+             
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
