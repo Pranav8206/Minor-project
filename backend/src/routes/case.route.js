@@ -1,6 +1,8 @@
 import { Router } from "express";
 
 import {
+  addCaseSuspect,
+  addCaseTimelineEvent,
   createCase,
   deleteCase,
   getCaseRecommendations,
@@ -17,6 +19,8 @@ const router = Router();
 
 router.route("/").get(protect, getCases).post(protect, upload.array("evidenceFiles", 10), createCase);
 router.post("/similar", protect, getSimilarCases);
+router.post("/:id/suspects", protect, addCaseSuspect);
+router.post("/:id/timeline", protect, addCaseTimelineEvent);
 router.get("/:id/timeline", protect, getCaseTimeline);
 router.get("/:id/recommendations", protect, getCaseRecommendations);
 router

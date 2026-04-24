@@ -60,12 +60,13 @@ The service returns up to 5 matches sorted by highest cosine similarity.
 
 1. Create and activate a Python virtual environment.
 2. Install dependencies:
-   - `pip install -r requirements.txt`
+  - `pip install -r requirements.txt`
 3. Download spaCy model:
-   - `python -m spacy download en_core_web_sm`
+  - `python -m spacy download en_core_web_sm`
 4. Run service:
-   - `uvicorn app.main:app --host 0.0.0.0 --port 8000`
+  - `uvicorn app.main:app --host 0.0.0.0 --port 8000`
 
 ## Health Check
 
 - `GET /health`
+

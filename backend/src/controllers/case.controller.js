@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import Case from "../models/case.model.js";
 import Suspect from "../models/suspect.model.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import { generateSearchInsights } from "../utils/groqClient.js";
 import { analyzeCaseDescription, searchSimilarCases } from "../utils/pythonAiClient.js";
 import calculateRiskScore from "../utils/riskScore.js";
 import { uploadEvidenceFileToCloudinary } from "../utils/cloudinary.js";
@@ -721,9 +722,25 @@ export const getSimilarCases = asyncHandler(async (req, res) => {
     })
     .filter(Boolean);
 
+  let insights = null;
+  if (results.length > 0) {
+    try {
+      insights = await generateSearchInsights({
+        query: query.trim(),
+        matches: results.map((entry) => ({
+          similarity: entry.similarity,
+          ...entry.case.toObject(),
+        })),
+      });
+    } catch {
+      insights = null;
+    }
+  }
+
   return res.status(200).json({
     count: results.length,
     results,
+    insights,
   });
 });
 
@@ -1031,5 +1048,80 @@ export const getCaseTimeline = asyncHandler(async (req, res) => {
     title: caseItem.title,
     count: timeline.length,
     timeline,
+  });
+});
+
+export const addCaseSuspect = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({
+      message: "Invalid case id",
+    });
+  }
+
+  const suspects = normalizeSuspects(Array.isArray(req.body?.suspects) ? req.body.suspects : []);
+  if (!Array.isArray(suspects) || suspects.length === 0) {
+    return res.status(400).json({
+      message: "At least one valid suspect is required",
+    });
+  }
+
+  const caseItem = await Case.findById(id);
+  if (!caseItem) {
+    return res.status(404).json({
+      message: "Case not found",
+    });
+  }
+
+  const existingSuspects = Array.isArray(caseItem.suspects)
+    ? caseItem.suspects.map((suspect) => ({
+        name: suspect.name,
+        relationship: suspect.relationship,
+        notes: suspect.notes,
+      }))
+    : [];
+  const mergedSuspects = [...existingSuspects, ...suspects];
+  const linkedSuspects = await syncSuspectsForCase(caseItem._id, mergedSuspects);
+
+  caseItem.suspects = linkedSuspects;
+  await caseItem.save();
+
+  return res.status(200).json({
+    message: "Suspect added successfully",
+    suspects: caseItem.suspects,
+  });
+});
+
+export const addCaseTimelineEvent = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({
+      message: "Invalid case id",
+    });
+  }
+
+  const timelineEntries = normalizeTimeline(Array.isArray(req.body?.timeline) ? req.body.timeline : []);
+  if (!Array.isArray(timelineEntries) || timelineEntries.length === 0) {
+    return res.status(400).json({
+      message: "At least one valid timeline event is required",
+    });
+  }
+
+  const caseItem = await Case.findById(id);
+  if (!caseItem) {
+    return res.status(404).json({
+      message: "Case not found",
+    });
+  }
+
+  const existingTimeline = Array.isArray(caseItem.timeline) ? caseItem.timeline : [];
+  caseItem.timeline = normalizeTimeline([...existingTimeline, ...timelineEntries]);
+  await caseItem.save();
+
+  return res.status(200).json({
+    message: "Timeline updated successfully",
+    timeline: caseItem.timeline,
   });
 });

@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Bell } from "lucide-react";
 
 import CaseTable from "../../components/cases/CaseTable";
 import EditCaseModal from "../../components/cases/EditCaseModal";
@@ -11,56 +10,6 @@ import useAuthGuard from "../../hooks/useAuthGuard";
 import api from "../../lib/api";
 
 const DEFAULT_LIMIT = 10;
-
-const getUserDisplayData = () => {
-  if (typeof window === "undefined") {
-    return {
-      name: "Officer",
-      rank: "Detective",
-      department: "Investigations",
-      initials: "OF",
-    };
-  }
-
-  const storedUser = window.localStorage.getItem("user");
-
-  if (!storedUser) {
-    return {
-      name: "Officer",
-      rank: "Detective",
-      department: "Investigations",
-      initials: "OF",
-    };
-  }
-
-  try {
-    const parsed = JSON.parse(storedUser);
-    const name = parsed?.name || "Officer";
-    const role = parsed?.role || "user";
-    const rank = role === "admin" ? "Chief Investigator" : "Detective";
-    const department = role === "admin" ? "Major Crimes" : "Homicide";
-    const initials = name
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part.charAt(0).toUpperCase())
-      .join("");
-
-    return {
-      name,
-      rank,
-      department,
-      initials: initials || "OF",
-    };
-  } catch {
-    return {
-      name: "Officer",
-      rank: "Detective",
-      department: "Investigations",
-      initials: "OF",
-    };
-  }
-};
 
 const normalizeStatusForApi = (value) => {
   if (!value) {
@@ -125,8 +74,6 @@ export default function CasesPage() {
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedCase, setSelectedCase] = useState(null);
-
-  const userProfile = useMemo(() => getUserDisplayData(), []);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -275,38 +222,7 @@ export default function CasesPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1400px] px-4 pb-8 pt-5 sm:px-6 lg:px-8">
-      <header className="mb-6 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <p className="text-text-secondary text-2xl leading-tight">
-            Welcome, {userProfile.name} | CIMS Case Management
-          </p>
-          <h1 className="mt-2 text-5xl font-semibold tracking-tight text-text-primary">Case Management</h1>
-        </div>
-
-        <div className="flex items-center gap-3 self-start">
-          <button
-            type="button"
-            aria-label="Notifications"
-            className="relative rounded-2xl border border-border bg-card p-3 text-text-secondary transition hover:border-primary/45 hover:text-text-primary"
-          >
-            <Bell size={20} />
-            <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-primary" />
-          </button>
-
-          <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-3 py-2">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-background text-sm font-semibold text-text-primary">
-              {userProfile.initials}
-            </div>
-            <div>
-              <p className="text-text-primary text-xl font-medium leading-tight">{userProfile.name}</p>
-              <p className="text-text-secondary text-sm leading-tight">Rank: {userProfile.rank}</p>
-              <p className="text-text-secondary text-sm leading-tight">Department: {userProfile.department}</p>
-            </div>
-          </div>
-        </div>
-      </header>
-
+    <div className="mx-auto w-full max-w-[1400px] px-4 pb-8 sm:px-6 lg:px-8">
       <FilterBar
         searchValue={searchInput}
         onSearchChange={setSearchInput}

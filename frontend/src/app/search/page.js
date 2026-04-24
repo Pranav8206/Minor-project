@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Bot, LocateFixed, MapPin, Search as SearchIcon, Sparkles } from "lucide-react";
+import Link from "next/link";
 
 import useAuthGuard from "../../hooks/useAuthGuard";
 import api from "../../lib/api";
@@ -73,6 +75,7 @@ export default function SearchPage() {
   const [error, setError] = useState("");
   const [results, setResults] = useState([]);
   const [recentQueries, setRecentQueries] = useState([]);
+  const [insights, setInsights] = useState(null);
 
   const keywords = useMemo(() => extractKeywords(query), [query]);
 
@@ -94,10 +97,12 @@ export default function SearchPage() {
       });
 
       setResults(response.data?.results || []);
+      setInsights(response.data?.insights || null);
       setRecentQueries((prev) => [query.trim(), ...prev.filter((item) => item !== query.trim())].slice(0, 5));
     } catch (apiError) {
       setError(apiError.response?.data?.message || "Search failed.");
       setResults([]);
+      setInsights(null);
     } finally {
       setIsLoading(false);
     }
@@ -106,6 +111,7 @@ export default function SearchPage() {
   const clearFilters = () => {
     setLocation("");
     setCrimeType("");
+    setInsights(null);
   };
 
   if (isChecking) {
@@ -119,46 +125,74 @@ export default function SearchPage() {
   return (
     <div className="space-y-6">
       <section className="rounded-3xl border border-border bg-card p-6 shadow-lg shadow-black/20">
-        <h3 className="text-text-primary text-xl font-semibold">Natural Language Search</h3>
-        <p className="text-text-secondary mt-1 text-sm">
-          Describe incidents in plain language. AI will return semantically similar cases with ranked scores.
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-text-secondary text-xs font-semibold uppercase tracking-[0.18em]">
+              CIMS AI Search
+            </p>
+            <h3 className="text-text-primary mt-2 text-2xl font-semibold">Intelligent Case Matching</h3>
+            <p className="text-text-secondary mt-1 text-sm">
+              Describe incident patterns and get semantically similar cases with AI-generated themes.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-border bg-background px-3 py-2 text-xs font-medium text-text-secondary">
+            Model-assisted retrieval
+          </div>
+        </div>
 
-        <form className="mt-5 grid gap-4 sm:grid-cols-[1.2fr,1fr,1fr,auto]" onSubmit={handleSearch}>
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Example: robbery involving knife near railway station with known suspect"
-            className="cims-input rounded-xl px-4 py-3 text-sm"
-          />
-          <input
-            value={location}
-            onChange={(event) => setLocation(event.target.value)}
-            placeholder="Location"
-            className="cims-input rounded-xl px-4 py-3 text-sm"
-          />
-          <input
-            value={crimeType}
-            onChange={(event) => setCrimeType(event.target.value)}
-            placeholder="Crime type"
-            className="cims-input rounded-xl px-4 py-3 text-sm"
-          />
-          <button
-            disabled={isLoading}
-            className="cims-button-primary rounded-xl px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            {isLoading ? "Searching..." : "Search"}
-          </button>
+        <form className="mt-5 space-y-4" onSubmit={handleSearch}>
+          <div className="grid gap-3 sm:grid-cols-[1.3fr,auto]">
+            <label className="relative block">
+              <SearchIcon
+                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary"
+                size={18}
+              />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="e.g., Burglary with specific MO involving a red getaway car and a crowbar"
+                className="cims-input rounded-xl py-3 pl-11 pr-4 text-sm"
+              />
+            </label>
+            <button
+              disabled={isLoading}
+              className="cims-button-primary min-w-36 rounded-xl px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {isLoading ? "Searching..." : "AI Search"}
+            </button>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <label className="relative block">
+              <MapPin
+                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary"
+                size={16}
+              />
+              <input
+                value={location}
+                onChange={(event) => setLocation(event.target.value)}
+                placeholder="Location"
+                className="cims-input rounded-xl py-2.5 pl-10 pr-4 text-sm"
+              />
+            </label>
+            <input
+              value={crimeType}
+              onChange={(event) => setCrimeType(event.target.value)}
+              placeholder="Crime type"
+              className="cims-input rounded-xl px-4 py-2.5 text-sm"
+            />
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-background px-4 py-2.5 text-sm font-medium text-text-secondary transition hover:border-primary/45 hover:text-text-primary"
+            >
+              <LocateFixed size={16} />
+              Clear filters
+            </button>
+          </div>
         </form>
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-text-secondary transition hover:border-primary/45 hover:text-text-primary"
-          >
-            Clear filters
-          </button>
           {keywords.length > 0 ? (
             <>
               <span className="text-text-secondary text-xs">Detected keywords:</span>
@@ -173,6 +207,54 @@ export default function SearchPage() {
 
         {error ? <p className="mt-3 text-sm font-medium text-primary">{error}</p> : null}
       </section>
+
+      {insights ? (
+        <section className="cims-card p-6">
+          <div className="flex items-center gap-2">
+            <Sparkles size={18} className="text-primary" />
+            <h4 className="text-text-primary font-semibold">AI Insights & Themes</h4>
+          </div>
+
+          {insights.refinedQuery ? (
+            <div className="mt-3 rounded-2xl border border-border bg-background px-4 py-3">
+              <p className="text-text-secondary text-xs uppercase tracking-[0.12em]">Refined query</p>
+              <p className="mt-1 text-sm text-text-primary">{insights.refinedQuery}</p>
+            </div>
+          ) : null}
+
+          {Array.isArray(insights.themes) && insights.themes.length > 0 ? (
+            <div className="mt-3">
+              <p className="text-text-secondary text-xs uppercase tracking-[0.12em]">Themes</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {insights.themes.map((theme, index) => (
+                  <span
+                    key={`${theme}-${index}`}
+                    className="rounded-full border border-border bg-background px-3 py-1 text-xs font-semibold text-primary"
+                  >
+                    {theme}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {Array.isArray(insights.insights) && insights.insights.length > 0 ? (
+            <div className="mt-4">
+              <p className="text-text-secondary text-xs uppercase tracking-[0.12em]">Case signals</p>
+              <ul className="mt-2 grid gap-2 md:grid-cols-2">
+                {insights.insights.map((item, index) => (
+                  <li
+                    key={`${item}-${index}`}
+                    className="rounded-xl border border-border bg-background px-3 py-2 text-sm text-text-primary"
+                  >
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       <section className="cims-card p-6">
         <h4 className="text-text-primary font-semibold">Recent Search Queries</h4>
@@ -214,12 +296,13 @@ export default function SearchPage() {
 
               return (
                 <article key={caseItem._id} className="rounded-2xl border border-border bg-card p-4 transition hover:border-primary/45 hover:shadow-sm">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-text-secondary text-xs font-semibold uppercase tracking-[0.15em]">
-                      {caseItem._id.slice(-6).toUpperCase()}
-                    </p>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-text-secondary">
+                      <Bot size={12} />
+                      Match ID: {caseItem._id.slice(-6).toUpperCase()}
+                    </div>
                     <span className="rounded-full bg-background px-2.5 py-1 text-xs font-semibold text-primary border border-border">
-                      {similarityScore}% match
+                      {similarityScore}% Match
                     </span>
                   </div>
                   <h5 className="text-text-primary mt-2 text-base font-semibold">{highlightText(caseItem.title, keywords)}</h5>
@@ -231,6 +314,11 @@ export default function SearchPage() {
                     <span className="bg-background rounded-full px-2 py-1">{caseItem.location}</span>
                     <span className="bg-background rounded-full px-2 py-1">{caseItem.crime_type}</span>
                     <span className="bg-background rounded-full px-2 py-1 capitalize">{caseItem.status}</span>
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <Link href={`/cases/${caseItem._id}`} className="cims-button-muted px-3 py-1.5 text-xs">
+                      View Full Case
+                    </Link>
                   </div>
                 </article>
               );

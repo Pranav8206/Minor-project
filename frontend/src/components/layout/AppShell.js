@@ -11,6 +11,7 @@ import {
   LogOut,
   Menu,
   X,
+  Bell,
 } from "lucide-react";
 
 const navItems = [
@@ -37,17 +38,72 @@ const getTopBarTitle = (pathname) => {
   return topBarMap[pathname] || "Control Center";
 };
 
+const getUserDisplayData = () => {
+  if (typeof window === "undefined") {
+    return {
+      name: "Officer",
+      rank: "Detective",
+      department: "Investigations",
+      initials: "OF",
+    };
+  }
+
+  const storedUser = window.localStorage.getItem("user");
+
+  if (!storedUser) {
+    return {
+      name: "Officer",
+      rank: "Detective",
+      department: "Investigations",
+      initials: "OF",
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(storedUser);
+    const name = parsed?.name || "Officer";
+    const role = parsed?.role || "user";
+    const rank = role === "admin" ? "Chief Investigator" : "Detective";
+    const department = role === "admin" ? "Major Crimes" : "Homicide";
+    const initials = name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join("");
+
+    return {
+      name,
+      rank,
+      department,
+      initials: initials || "OF",
+    };
+  } catch {
+    return {
+      name: "Officer",
+      rank: "Detective",
+      department: "Investigations",
+      initials: "OF",
+    };
+  }
+};
+
 export default function AppShell({ children }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const userProfile = getUserDisplayData();
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setMounted(true);
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
 
   const handleLogout = async () => {
     localStorage.removeItem("token");
@@ -63,23 +119,15 @@ export default function AppShell({ children }) {
     );
   }
 
-  if (pathname === "/cases") {
-    return (
-      <div className="bg-background text-text-primary min-h-screen">
-        {children}
-      </div>
-    );
-  }
-
   if (!mounted) {
     return null;
   }
 
   return (
     <div className="bg-background text-text-primary min-h-screen">
-      <div className="mx-auto flex min-h-screen w-full max-w-400">
+      <div className="mx-auto flex min-h-screen w-full max-w-400 flex-col lg:flex-row">
         {/* Desktop Sidebar */}
-        <aside className="hidden w-20 border-r border-border/90 bg-card/90 p-4 backdrop-blur lg:flex flex-col">
+        <aside className="hidden w-20 shrink-0 border-r border-border/90 bg-card/90 p-4 backdrop-blur lg:flex lg:flex-col">
           <div className="flex flex-col items-center gap-2 mb-8 pb-6 border-b border-border/50">
             <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
               <span className="text-white font-bold text-lg">C</span>
@@ -120,31 +168,37 @@ export default function AppShell({ children }) {
           </button>
         </aside>
 
-        {/* Mobile Header + Sidebar Toggle */}
-        <div className="lg:hidden w-full flex flex-col">
-          <header className="sticky top-0 z-30 border-b border-border/80 bg-card/90 px-4 py-4 backdrop-blur flex items-center justify-between">
+        {/* Mobile Sidebar Drawer */}
+        {sidebarOpen ? (
+          <div className="fixed inset-0 z-50 lg:hidden">
             <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-background rounded-lg transition"
-            >
-              {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
-            <div>
-              <p className="text-text-secondary text-xs font-semibold uppercase tracking-[0.2em]">CIMS</p>
-              <h2 className="text-text-primary text-lg font-semibold">{getTopBarTitle(pathname)}</h2>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="p-2 hover:bg-background rounded-lg transition text-text-secondary"
-            >
-              <LogOut size={20} />
-            </button>
-          </header>
+              type="button"
+              className="absolute inset-0 bg-black/50"
+              onClick={() => setSidebarOpen(false)}
+              aria-label="Close sidebar backdrop"
+            />
+            <aside className="relative z-10 h-full w-72 max-w-[85vw] border-r border-border/90 bg-card p-4 backdrop-blur">
+              <div className="mb-6 flex items-center justify-between border-b border-border/50 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
+                    <span className="text-lg font-bold text-white">C</span>
+                  </div>
+                  <div>
+                    <p className="text-text-primary text-sm font-semibold">CIMS</p>
+                    <p className="text-text-secondary text-xs">Navigation</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSidebarOpen(false)}
+                  className="rounded-lg p-2 text-text-secondary transition hover:bg-background hover:text-text-primary"
+                  aria-label="Close sidebar"
+                >
+                  <X size={20} />
+                </button>
+              </div>
 
-          {/* Mobile Sidebar */}
-          {sidebarOpen && (
-            <aside className="border-b border-border/90 bg-card/90 backdrop-blur">
-              <nav className="flex flex-col gap-2 p-4">
+              <nav className="flex flex-col gap-2">
                 {navItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = pathname.startsWith(item.href);
@@ -166,32 +220,83 @@ export default function AppShell({ children }) {
                   );
                 })}
               </nav>
+
+              <button
+                onClick={handleLogout}
+                className="mt-6 flex w-full items-center gap-3 rounded-lg px-4 py-3 text-text-secondary transition hover:bg-background hover:text-text-primary"
+              >
+                <LogOut size={20} />
+                <span className="text-sm font-medium">Logout</span>
+              </button>
             </aside>
-          )}
-        </div>
+          </div>
+        ) : null}
 
         {/* Desktop Main Content */}
-        <main className="hidden lg:flex min-h-screen flex-1 flex-col w-full">
-          <header className="sticky top-0 z-20 border-b border-border/80 bg-card/90 px-8 py-4 backdrop-blur flex items-center justify-between">
-            <div>
-              <p className="text-text-secondary text-xs font-semibold uppercase tracking-[0.2em]">CIMS</p>
-              <h2 className="text-text-primary text-xl font-semibold">{getTopBarTitle(pathname)}</h2>
+        <main className="min-h-screen w-full min-w-0 flex-1 lg:flex lg:flex-col">
+          <header className="sticky top-0 z-40 w-full border-b border-border/80 bg-card/90 px-4 py-4 backdrop-blur lg:hidden">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="p-2 hover:bg-background rounded-lg transition"
+                aria-label="Toggle sidebar"
+              >
+                {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+              </button>
+              <div>
+                <p className="text-text-secondary text-xs font-semibold uppercase tracking-[0.2em]">CIMS</p>
+                <h2 className="text-text-primary text-lg font-semibold">{getTopBarTitle(pathname)}</h2>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="p-2 hover:bg-background rounded-lg transition text-text-secondary"
+                aria-label="Logout"
+              >
+                <LogOut size={20} />
+              </button>
             </div>
-            <button
-              onClick={handleLogout}
-              className="cims-button-muted text-sm"
-            >
-              <LogOut size={16} />
-              Logout
-            </button>
           </header>
 
-          <section className="flex-1 px-8 py-8 overflow-y-auto">{children}</section>
-        </main>
+          <header className="sticky top-0 z-20 hidden border-b border-border/80 bg-card/90 px-6 py-5 backdrop-blur lg:block xl:px-8">
+            <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+              <div>
+                <p className="text-text-secondary text-2xl leading-tight">
+                  Welcome, {userProfile.name} | CIMS Case Management
+                </p>
+                <h2 className="mt-2 text-5xl font-semibold tracking-tight text-text-primary">
+                  {getTopBarTitle(pathname)}
+                </h2>
+              </div>
 
-        {/* Mobile Main Content */}
-        <main className="lg:hidden flex-1 flex flex-col w-full">
-          <section className="flex-1 px-4 py-6 overflow-y-auto">{children}</section>
+              <div className="flex items-center gap-3 self-start">
+                <button
+                  type="button"
+                  aria-label="Notifications"
+                  className="relative rounded-2xl border border-border bg-card p-3 text-text-secondary transition hover:border-primary/45 hover:text-text-primary"
+                >
+                  <Bell size={20} />
+                  <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-primary" />
+                </button>
+
+                <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-3 py-2">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-background text-sm font-semibold text-text-primary">
+                    {userProfile.initials}
+                  </div>
+                  <div>
+                    <p className="text-text-primary text-xl font-medium leading-tight">{userProfile.name}</p>
+                    <p className="text-text-secondary text-sm leading-tight">Rank: {userProfile.rank}</p>
+                    <p className="text-text-secondary text-sm leading-tight">
+                      Department: {userProfile.department}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          <section className="flex-1 overflow-y-auto px-4 py-6 sm:px-5 lg:px-6 lg:py-8 xl:px-8">
+            {children}
+          </section>
         </main>
       </div>
     </div>

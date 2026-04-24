@@ -137,6 +137,18 @@ export default function CaseDetailPage() {
   const [editFormData, setEditFormData] = useState(null);
   const [initialEditData, setInitialEditData] = useState(null);
   const [hasAutoOpenedFromQuery, setHasAutoOpenedFromQuery] = useState(false);
+  const [quickSuspect, setQuickSuspect] = useState({
+    name: "",
+    relationship: "",
+    notes: "",
+  });
+  const [quickTimeline, setQuickTimeline] = useState({
+    date: "",
+    event: "",
+  });
+  const [quickActionError, setQuickActionError] = useState("");
+  const [quickActionSuccess, setQuickActionSuccess] = useState("");
+  const [isQuickSubmitting, setIsQuickSubmitting] = useState(false);
 
   const fetchCaseDetail = useCallback(async () => {
     if (!isAuthorized || !id) {
@@ -399,6 +411,75 @@ export default function CaseDetailPage() {
     }
   };
 
+  const handleQuickSuspectSubmit = async (event) => {
+    event.preventDefault();
+    const name = quickSuspect.name.trim();
+
+    if (!name) {
+      setQuickActionError("Suspect name is required.");
+      setQuickActionSuccess("");
+      return;
+    }
+
+    try {
+      setIsQuickSubmitting(true);
+      setQuickActionError("");
+      setQuickActionSuccess("");
+
+      await api.post(`/cases/${id}/suspects`, {
+        suspects: [
+          {
+            name,
+            relationship: quickSuspect.relationship.trim(),
+            notes: quickSuspect.notes.trim(),
+          },
+        ],
+      });
+
+      setQuickSuspect({ name: "", relationship: "", notes: "" });
+      setQuickActionSuccess("Suspect linked successfully.");
+      await fetchCaseDetail();
+    } catch (apiError) {
+      setQuickActionError(apiError.response?.data?.message || "Failed to add suspect.");
+      setQuickActionSuccess("");
+    } finally {
+      setIsQuickSubmitting(false);
+    }
+  };
+
+  const handleQuickTimelineSubmit = async (event) => {
+    event.preventDefault();
+    if (!quickTimeline.date || !quickTimeline.event.trim()) {
+      setQuickActionError("Timeline date and event are required.");
+      setQuickActionSuccess("");
+      return;
+    }
+
+    try {
+      setIsQuickSubmitting(true);
+      setQuickActionError("");
+      setQuickActionSuccess("");
+
+      await api.post(`/cases/${id}/timeline`, {
+        timeline: [
+          {
+            date: quickTimeline.date,
+            event: quickTimeline.event.trim(),
+          },
+        ],
+      });
+
+      setQuickTimeline({ date: "", event: "" });
+      setQuickActionSuccess("Timeline event added successfully.");
+      await fetchCaseDetail();
+    } catch (apiError) {
+      setQuickActionError(apiError.response?.data?.message || "Failed to add timeline event.");
+      setQuickActionSuccess("");
+    } finally {
+      setIsQuickSubmitting(false);
+    }
+  };
+
   if (isChecking) {
     return (
       <div className="cims-card text-text-secondary p-6 text-sm">
@@ -515,6 +596,35 @@ export default function CaseDetailPage() {
                 ))}
               </ol>
             )}
+
+            <form className="mt-6 rounded-2xl border border-border bg-background p-4" onSubmit={handleQuickTimelineSubmit}>
+              <p className="text-text-primary text-sm font-semibold">Quick add timeline event</p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-[1fr,2fr,auto]">
+                <input
+                  type="datetime-local"
+                  value={quickTimeline.date}
+                  onChange={(event) =>
+                    setQuickTimeline((prev) => ({ ...prev, date: event.target.value }))
+                  }
+                  className="cims-input px-3 py-2 text-sm"
+                />
+                <input
+                  value={quickTimeline.event}
+                  onChange={(event) =>
+                    setQuickTimeline((prev) => ({ ...prev, event: event.target.value }))
+                  }
+                  className="cims-input px-3 py-2 text-sm"
+                  placeholder="Event details"
+                />
+                <button
+                  type="submit"
+                  disabled={isQuickSubmitting}
+                  className="cims-button-primary px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  Add Event
+                </button>
+              </div>
+            </form>
           </article>
 
           <div className="grid gap-6 lg:grid-cols-2">
@@ -533,6 +643,46 @@ export default function CaseDetailPage() {
               ) : (
                 <p className="text-text-secondary mt-4 text-sm">No suspects linked yet.</p>
               )}
+
+              <form className="mt-6 rounded-2xl border border-border bg-background p-4" onSubmit={handleQuickSuspectSubmit}>
+                <p className="text-text-primary text-sm font-semibold">Quick add suspect</p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                  <input
+                    value={quickSuspect.name}
+                    onChange={(event) =>
+                      setQuickSuspect((prev) => ({ ...prev, name: event.target.value }))
+                    }
+                    className="cims-input px-3 py-2 text-sm"
+                    placeholder="Suspect name"
+                  />
+                  <input
+                    value={quickSuspect.relationship}
+                    onChange={(event) =>
+                      setQuickSuspect((prev) => ({
+                        ...prev,
+                        relationship: event.target.value,
+                      }))
+                    }
+                    className="cims-input px-3 py-2 text-sm"
+                    placeholder="Relationship"
+                  />
+                  <input
+                    value={quickSuspect.notes}
+                    onChange={(event) =>
+                      setQuickSuspect((prev) => ({ ...prev, notes: event.target.value }))
+                    }
+                    className="cims-input px-3 py-2 text-sm"
+                    placeholder="Notes"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={isQuickSubmitting}
+                  className="cims-button-primary mt-3 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  Add Suspect
+                </button>
+              </form>
             </article>
 
             <article className="cims-card p-6">
@@ -633,6 +783,17 @@ export default function CaseDetailPage() {
           </article>
         </section>
       </div>
+
+      {quickActionError ? (
+        <div className="rounded-2xl border border-border bg-card px-4 py-3 text-sm font-medium text-primary">
+          {quickActionError}
+        </div>
+      ) : null}
+      {quickActionSuccess ? (
+        <div className="rounded-2xl border border-border bg-card px-4 py-3 text-sm font-medium text-text-secondary">
+          {quickActionSuccess}
+        </div>
+      ) : null}
 
       {isEditOpen && editFormData ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 px-4 py-6 backdrop-blur-sm">
