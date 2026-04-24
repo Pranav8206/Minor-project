@@ -257,11 +257,11 @@ export default function AppShell({ children }) {
             </div>
           </header>
 
-          <header className="sticky top-0 z-20 hidden border-b border-border/80 bg-card/90 px-6 py-5 backdrop-blur lg:block xl:px-8">
-            <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+          <header className="sticky top-0 z-20 hidden border-b border-border/80 bg-card/90 px-6 py-2 backdrop-blur lg:block xl:px-8">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
               <div>
                
-                <h2 className="mt-2 text-3xl md:text-4xl font-semibold tracking-tight text-text-primary">
+                <h2 className="mt-1 text-3xl md:text-4xl font-semibold tracking-tight text-text-primary">
                   {getTopBarTitle(pathname)}
                 </h2>
               </div>
@@ -269,7 +269,7 @@ export default function AppShell({ children }) {
               <div className="flex items-center gap-3 self-start">
                 
 
-                <div className="flex items-center gap-3  px-3 py-2">
+                <div className="flex items-center gap-3  px-3 py-1">
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-background text-sm font-semibold text-text-primary">
                     {userProfile.initials}
                   </div>

@@ -334,7 +334,7 @@ export default function DashboardPage() {
           <div className="mt-3 dashboard-skeleton h-4 w-full max-w-xl rounded-full" />
         </section>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, index) => (
             <div key={index} className="dashboard-panel p-5">
               <div className="dashboard-skeleton h-4 w-28 rounded-full" />
@@ -344,7 +344,7 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-3">
+        <div className="grid gap-6 lg:grid-cols-3">
           {Array.from({ length: 3 }).map((_, index) => (
             <section key={index} className="dashboard-panel p-5">
               <div className="dashboard-skeleton h-5 w-40 rounded-full" />
@@ -394,7 +394,7 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {dashboardMetrics.map((metric) => {
           const Icon = metric.Icon;
 
@@ -413,8 +413,8 @@ export default function DashboardPage() {
         })}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-3">
-        <section className="dashboard-panel p-5 xl:col-span-2">
+      <div className="grid gap-6 lg:grid-cols-3">
+        <section className="dashboard-panel p-5 lg:col-span-2">
           <h3 className="text-text-primary text-lg font-semibold">Crime by location</h3>
           <p className="text-text-secondary mt-1 text-sm">Hotspot density across top reporting zones.</p>
           <div className="mt-5 h-72">
@@ -495,7 +495,7 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <section className="dashboard-panel p-5 xl:col-span-2">
+        <section className="dashboard-panel p-5 lg:col-span-2">
           <h3 className="text-text-primary text-lg font-semibold">Crime over time</h3>
           <p className="text-text-secondary mt-1 text-sm">Incident rhythm and acceleration over time.</p>
           <div className="mt-5 h-80">

@@ -76,7 +76,6 @@ export default function FilterBar({
           <label className="block">
             <span className="sr-only">Start date</span>
             <div className="relative">
-              <CalendarRange className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary" size={16} />
               <input
                 type="date"
                 value={startDate}
